@@ -1,0 +1,16 @@
+# Excluded
+
+/*.*
+
+# Included
+
+!/.gitignore
+
+!/demo
+!/pax2d
+
+!/README.md
+!/TODO.md
+
+!/build.bat
+!/build.sh

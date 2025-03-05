@@ -164,6 +164,7 @@ texture_write_all :: proc(self: ^Texture, layout: Texture_Layout, data: []byte) 
 
     defer gl.BindTexture(gl.TEXTURE_2D, 0)
 
+    // NOTE(gio): map the texture?
     gl.TexSubImage2D(gl.TEXTURE_2D, 0, 0, 0, width, height,
         u32(layout_value), gl.UNSIGNED_BYTE, &data[0])
 
@@ -192,6 +193,7 @@ texture_write_to_range :: proc(self: ^Texture, layout: Texture_Layout, data: []b
 
     defer gl.BindTexture(gl.TEXTURE_2D, 0)
 
+    // NOTE(gio): map the texture?
     gl.TexSubImage2D(gl.TEXTURE_2D, 0, 0, 0, width, height,
         u32(layout_value), gl.UNSIGNED_BYTE, &data[0])
 

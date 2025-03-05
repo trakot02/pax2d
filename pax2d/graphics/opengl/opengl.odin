@@ -3,12 +3,6 @@ package opengl
 import gl "vendor:OpenGL"
 
 //
-// Values
-//
-
-VERTEX_ARRAY_DEFAULT := vertex_array_make_default()
-
-//
 // Types
 //
 
@@ -54,22 +48,18 @@ vertex_array_unbind :: proc()
     gl.BindVertexArray(0)
 }
 
-@(private)
-vertex_array_make_default :: proc() -> Vertex_Array
+set_viewport :: proc(rect: [4]int)
 {
-    value, state := vertex_array_make()
-
-    if state == true {
-        vertex_array_bind(&value)
-    }
-
-    return value
+    gl.Viewport(i32(rect.x), i32(rect.y), i32(rect.z), i32(rect.w))
 }
 
-clear :: proc(color: [4]f32 = {})
+set_background_color :: proc(color: [3]f32 = {})
 {
-    gl.ClearColor(color.r, color.g, color.b, color.a)
+    gl.ClearColor(color.r, color.g, color.b, 1)
+}
 
+clear :: proc()
+{
     gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
 }
 

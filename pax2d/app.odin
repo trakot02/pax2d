@@ -8,6 +8,8 @@ import "core:time"
 //
 
 APP_LAYER_DEFAULT :: App_Layer {
+    proc_load   = proc(self: rawptr, app: ^App_Info) -> bool { return false },
+    proc_unload = proc(self: rawptr, app: ^App_Info) {},
     proc_enter  = proc(self: rawptr, app: ^App_Info) {},
     proc_leave  = proc(self: rawptr, app: ^App_Info) {},
     proc_tick   = proc(self: rawptr, app: ^App_Info, delta_time: f32) {},
@@ -22,6 +24,8 @@ App_Layer :: struct
 {
     self: rawptr,
 
+    proc_load:   proc(self: rawptr, app: ^App_Info) -> bool,
+    proc_unload: proc(self: rawptr, app: ^App_Info),
     proc_enter:  proc(self: rawptr, app: ^App_Info),
     proc_leave:  proc(self: rawptr, app: ^App_Info),
     proc_tick:   proc(self: rawptr, app: ^App_Info, delta_time: f32),
@@ -183,6 +187,16 @@ app_loop :: proc(self: ^App, layer: App_Layer, conf: App_Conf) -> bool
 app_layer_default :: proc() -> App_Layer
 {
     return APP_LAYER_DEFAULT
+}
+
+app_layer_load :: proc(self: ^App_Layer, app: ^App_Info) -> bool
+{
+    return self.proc_load(self.self, app)
+}
+
+app_layer_unload :: proc(self: ^App_Layer, app: ^App_Info)
+{
+    self.proc_unload(self.self, app)
 }
 
 app_layer_enter :: proc(self: ^App_Layer, app: ^App_Info)

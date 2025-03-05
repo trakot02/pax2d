@@ -6,5 +6,5 @@ package graphics
 
 View :: struct
 {
-
+    // TODO(gio): implement
 }

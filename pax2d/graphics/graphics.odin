@@ -8,17 +8,19 @@ import gl "./opengl"
 // Values
 //
 
+VERTEX_ARRAY_DEFAULT := gl.Vertex_Array {}
+
 VERTEX_BUFFER_LIMIT := 4096
 
-VERTEX_BUFFER_DEFAULT := vertex_buffer_make_default()
-VERTEX_LAYOUT_DEFAULT := vertex_layout_make_default()
+VERTEX_LAYOUT_DEFAULT := gl.Vertex_Layout {}
+VERTEX_BUFFER_DEFAULT := gl.Vertex_Buffer {}
 
-SHADER_DEFAULT := shader_make_default()
+SHADER_DEFAULT := gl.Shader {} 
 
-SAMPLER_SHARP  := sampler_make_sharp()
-SAMPLER_SMOOTH := sampler_make_smooth()
+SAMPLER_SHARP  := gl.Sampler {} 
+SAMPLER_SMOOTH := gl.Sampler {}
 
-TEXTURE_WHITE := texture_make_white()
+TEXTURE_WHITE := gl.Texture {}
 
 //
 // Types
@@ -55,11 +57,32 @@ start :: proc(allocator := context.allocator) -> State
     value.textures = make([dynamic]^gl.Texture, allocator)
     value.samplers = make([dynamic]^gl.Sampler, allocator)
 
+    VERTEX_ARRAY_DEFAULT := vertex_array_make_default()
+
+    VERTEX_LAYOUT_DEFAULT := vertex_layout_make_default()
+    VERTEX_BUFFER_DEFAULT := vertex_buffer_make_default(VERTEX_LAYOUT_DEFAULT)
+
+    SHADER_DEFAULT := shader_make_default()
+
+    SAMPLER_SHARP  := sampler_make_sharp()
+    SAMPLER_SMOOTH := sampler_make_smooth()
+
+    TEXTURE_WHITE := texture_make_white()
+
     return value
 }
 
 stop :: proc(self: ^State)
 {
+    gl.texture_destroy(&TEXTURE_WHITE)
+    
+    gl.sampler_destroy(&SAMPLER_SMOOTH)
+    gl.sampler_destroy(&SAMPLER_SHARP)
+
+    gl.shader_destroy(&SHADER_DEFAULT)
+
+    gl.vertex_buffer_destroy(&VERTEX_BUFFER_DEFAULT)
+
     delete(self.samplers)
     delete(self.textures)
 
@@ -70,6 +93,16 @@ stop :: proc(self: ^State)
     self.vertices = {}
     self.textures = {}
     self.samplers = {}
+}
+
+set_viewport :: proc(self: ^State, rect: [4]int)
+{
+    gl.set_viewport(rect)
+}
+
+set_background_color :: proc(self: ^State, color: [3]f32)
+{
+    gl.set_background_color(color)
 }
 
 begin :: proc(self: ^State, view: ^View)
@@ -88,9 +121,10 @@ end :: proc(self: ^State)
     gl.clear()
 
     for index in 0 ..< len(self.vertices) {
-        // TODO(gio): Update start and stop
+        // TODO(gio): update start and stop and push stuff to the bundles, when
+        //            those are full, paint.
 
-        // gl.vertex_buffer_write_front(&self.buffer,
+        // gl.vertex_buffer_write_to_front(&VERTEX_BUFFER_DEFAULT,
         //     self.vertices[start:stop])
 
         gl.paint(&SHADER_DEFAULT, &VERTEX_BUFFER_DEFAULT,
@@ -103,6 +137,33 @@ end :: proc(self: ^State)
     }
 
     clear(&self.vertices)
+}
+
+paint_rect :: proc(self: ^State, rect: [4]f32, color: [4]f32, scale: [2]f32)
+{
+    // TODO(gio): inserts the vertices inside the state next to the same ones that share the same texture.
+}
+
+paint_rect_rotated :: proc(self: ^State, rect: [4]f32, color: [4]f32, angle: f32, pivot: [2]f32)
+{
+    // TODO(gio): inserts the vertices inside the state next to the same ones that share the same texture.
+}
+
+paint_rect_general :: proc(self: ^State, rect: [4]f32, color: [4]f32, scale: [2]f32, angle: f32, pivot: [2]f32)
+{
+    // TODO(gio): inserts the vertices inside the state next to the same ones that share the same texture.
+}
+
+@(private)
+vertex_array_make_default :: proc() -> gl.Vertex_Array
+{
+    value, state := gl.vertex_array_make()
+
+    if state == true {
+        gl.vertex_array_bind(&value)
+    }
+
+    return value
 }
 
 @(private)
@@ -119,10 +180,10 @@ vertex_layout_make_default :: proc() -> gl.Vertex_Layout
 }
 
 @(private)
-vertex_buffer_make_default :: proc() -> gl.Vertex_Buffer
+vertex_buffer_make_default :: proc(layout: gl.Vertex_Layout) -> gl.Vertex_Buffer
 {
     value, state := gl.vertex_buffer_make_with_storage(
-        vertex_layout_make_default(), VERTEX_BUFFER_LIMIT)
+        layout, VERTEX_BUFFER_LIMIT)
 
     if state == false {
         log.debugf("Graphics: Unable to create default vertex buffer")

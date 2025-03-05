@@ -165,9 +165,10 @@ vertex_buffer_write_to_front :: proc(self: ^Vertex_Buffer, data: []$T) -> bool
     return true
 }
 
-// TODO(gio): Check if range is valid and if items surpass the current level, update them
 vertex_buffer_write_to_range :: proc(self: ^Vertex_Buffer, data: []$T, range: [2]int) -> bool
 {
+    // TODO(gio): check if range is valid and if items surpass the current level, update them
+
     return false
 }
 
@@ -259,6 +260,7 @@ index_buffer_write_all :: proc(self: ^Index_Buffer, data: []$T) -> bool
 
     defer gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, 0)
 
+    // NOTE(gio): map the buffer?
     gl.BufferSubData(gl.ELEMENT_ARRAY_BUFFER, 0, bytes, &data[0])
 
     self.items = items
@@ -280,6 +282,7 @@ index_buffer_write_to_front :: proc(self: ^Index_Buffer, data: []$T) -> bool
 
     defer gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, 0)
 
+    // NOTE(gio): map the buffer?
     gl.BufferSubData(gl.ELEMENT_ARRAY_BUFFER, 0, bytes, &data[0])
 
     self.items = max(self.items, items)
@@ -287,9 +290,10 @@ index_buffer_write_to_front :: proc(self: ^Index_Buffer, data: []$T) -> bool
     return true
 }
 
-// TODO(gio): Check if range is valid and if items surpass the current level, update them
 index_buffer_write_to_range :: proc(self: ^Index_Buffer, data: []$T, range: [2]int) -> bool
 {
+    // TODO(gio): Check if range is valid and if items surpass the current level, update them
+
     return false
 }
 
@@ -386,6 +390,7 @@ vertex_buffer_set_layout :: proc(self: ^Vertex_Buffer, layout: Vertex_Layout)
     }
 }
 
+// TODO(gio): reintroduce
 @(private)
 BUFFER_USAGE := [Buffer_Usage]int {
     .USAGE_NONE         = 0,

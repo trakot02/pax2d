@@ -28,7 +28,9 @@ main_layer_update :: proc(self: ^Main_Layer, app: ^pax.App_Info, frame_time: f32
         app.active = false
     }
     
-    pax.graphics_begin(&app.graphics)
+    pax.graphics_begin(&app.graphics, nil)
+
+    pax.graphics_set_background_color(&app.graphics, {0.3, 0.3, 0.3})
 
     pax.graphics_paint_rect(&app.graphics, {   0,    0, 0.5, 0.5}, {0.5, 0, 0, 0.5})
     pax.graphics_paint_rect(&app.graphics, {-0.5, -0.5, 0.5, 0.5}, {0, 0, 0.5, 0.5})
@@ -44,6 +46,7 @@ main_app_layer :: proc(self: ^Main_Layer) -> pax.App_Layer
 
     value.self = auto_cast self
 
+    value.proc_enter  = auto_cast main_layer_enter
     value.proc_update = auto_cast main_layer_update
 
     return value

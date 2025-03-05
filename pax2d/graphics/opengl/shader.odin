@@ -69,7 +69,7 @@ shader_add_stage_from_source :: proc(self: ^Shader_Builder, type: Shader_Stage_T
 
 shader_add_stage_from_file :: proc(self: ^Shader_Builder, type: Shader_Stage_Type, filename: string) -> bool
 {
-    assert(false, "Not implemented yet")
+    // TODO(gio): implement
 
     return false
 }

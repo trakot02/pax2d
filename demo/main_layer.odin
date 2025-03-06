@@ -11,12 +11,12 @@ Main_Layer :: struct
     // empty...
 }
 
-main_layer_enter :: proc(self: ^Main_Layer, app: ^pax.App_Info)
+main_layer_enter :: proc(self: ^Main_Layer, app: ^pax.App_State)
 {
     // empty...
 }
 
-main_layer_update :: proc(self: ^Main_Layer, app: ^pax.App_Info, frame_time: f32)
+main_layer_update :: proc(self: ^Main_Layer, app: ^pax.App_State, frame_time: f32)
 {
     glfw.PollEvents()
 
@@ -27,13 +27,13 @@ main_layer_update :: proc(self: ^Main_Layer, app: ^pax.App_Info, frame_time: f32
     if glfw.GetKey(WINDOW, glfw.KEY_ESCAPE) == glfw.PRESS {
         app.active = false
     }
-    
+
     pax.graphics_begin(&app.graphics, nil)
 
-    pax.graphics_set_background_color(&app.graphics, {0.3, 0.3, 0.3})
-
-    pax.graphics_paint_rect(&app.graphics, {   0,    0, 0.5, 0.5}, {0.5, 0, 0, 0.5})
-    pax.graphics_paint_rect(&app.graphics, {-0.5, -0.5, 0.5, 0.5}, {0, 0, 0.5, 0.5})
+    pax.graphics_paint_rect(&app.graphics, {   0,    0, 0.5, 0.5}, {1, 0, 0, 0})
+    pax.graphics_paint_rect(&app.graphics, {-0.5,    0, 0.5, 0.5}, {0, 1, 0, 0})
+    pax.graphics_paint_rect(&app.graphics, {-0.5, -0.5, 0.5, 0.5}, {0, 0, 1, 0})
+    pax.graphics_paint_rect(&app.graphics, {   0, -0.5, 0.5, 0.5}, {0, 0, 0, 0})
 
     pax.graphics_end(&app.graphics)
 

@@ -20,11 +20,14 @@ demo_start :: proc()
     WINDOW = glfw.CreateWindow(640, 360, "Pax", nil, nil)
 
     glfw.MakeContextCurrent(WINDOW)
-    glfw.SwapInterval(1)
-    
+    // glfw.SwapInterval(1)
+
     gl.load_up_to(3, 3, glfw.gl_set_proc_address)
 
-    gl.Viewport(0, 0, 640, 360)
+    // pax
+
+    pax.graphics_set_viewport({0, 0, 640, 360})
+    pax.graphics_set_background_color({1, 1, 1})
 }
 
 demo_stop :: proc()
@@ -35,7 +38,7 @@ demo_stop :: proc()
 main :: proc()
 {
     context.logger = log.create_console_logger()
-    
+
     demo_start()
 
     defer demo_stop()

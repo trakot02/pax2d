@@ -63,21 +63,18 @@ clear :: proc()
     gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
 }
 
-paint :: proc(shader: ^Shader, buffer: ^Vertex_Buffer, textures: ^Texture_Bundle, samplers: ^Sampler_Bundle)
+paint :: proc(buffer: ^Vertex_Buffer)
 {
-    shader_bind(shader)
+    //
+    // NOTE(gio): Optional due to the vertex array.
+    //
 
-    texture_bundle_bind(textures)
-    sampler_bundle_bind(samplers)
-
-    vertex_buffer_bind(buffer)
+    /**
+     * gl.BindBuffer(gl.ARRAY_BUFFER, u32(buffer.handle))
+     *
+     * defer gl.BindBuffer(gl.ARRAY_BUFFER, 0)
+     *
+     */
 
     gl.DrawArrays(gl.TRIANGLES, 0, i32(buffer.items))
-
-    vertex_buffer_unbind()
-
-    sampler_bundle_unbind()
-    texture_bundle_unbind()
-
-    shader_unbind()
 }

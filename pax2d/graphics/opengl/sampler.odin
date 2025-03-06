@@ -107,7 +107,7 @@ sampler_set_filtering :: proc(self: ^Sampler, filter: Sampler_Filter, mode: Samp
     }
 
     gl.SamplerParameteri(u32(self.handle),
-        u32(filter_value), i32(mode_value)) 
+        u32(filter_value), i32(mode_value))
 
     return true
 }

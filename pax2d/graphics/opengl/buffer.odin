@@ -117,7 +117,7 @@ vertex_buffer_set_storage :: proc(self: ^Vertex_Buffer, layout: Vertex_Layout, i
 
     self.stride = stride
     self.bytes  = bytes
-    
+
     vertex_buffer_set_layout(self, layout)
 
     return true

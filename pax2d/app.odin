@@ -8,12 +8,12 @@ import "core:time"
 //
 
 APP_LAYER_DEFAULT :: App_Layer {
-    proc_load   = proc(self: rawptr, app: ^App_Info) -> bool { return false },
-    proc_unload = proc(self: rawptr, app: ^App_Info) {},
-    proc_enter  = proc(self: rawptr, app: ^App_Info) {},
-    proc_leave  = proc(self: rawptr, app: ^App_Info) {},
-    proc_tick   = proc(self: rawptr, app: ^App_Info, delta_time: f32) {},
-    proc_update = proc(self: rawptr, app: ^App_Info, frame_time: f32) {},
+    proc_load   = proc(self: rawptr, app: ^App_State) -> bool { return false },
+    proc_unload = proc(self: rawptr, app: ^App_State) {},
+    proc_enter  = proc(self: rawptr, app: ^App_State) {},
+    proc_leave  = proc(self: rawptr, app: ^App_State) {},
+    proc_tick   = proc(self: rawptr, app: ^App_State, delta_time: f32) {},
+    proc_update = proc(self: rawptr, app: ^App_State, frame_time: f32) {},
 }
 
 //
@@ -24,12 +24,12 @@ App_Layer :: struct
 {
     self: rawptr,
 
-    proc_load:   proc(self: rawptr, app: ^App_Info) -> bool,
-    proc_unload: proc(self: rawptr, app: ^App_Info),
-    proc_enter:  proc(self: rawptr, app: ^App_Info),
-    proc_leave:  proc(self: rawptr, app: ^App_Info),
-    proc_tick:   proc(self: rawptr, app: ^App_Info, delta_time: f32),
-    proc_update: proc(self: rawptr, app: ^App_Info, frame_time: f32),
+    proc_load:   proc(self: rawptr, app: ^App_State) -> bool,
+    proc_unload: proc(self: rawptr, app: ^App_State),
+    proc_enter:  proc(self: rawptr, app: ^App_State),
+    proc_leave:  proc(self: rawptr, app: ^App_State),
+    proc_tick:   proc(self: rawptr, app: ^App_State, delta_time: f32),
+    proc_update: proc(self: rawptr, app: ^App_State, frame_time: f32),
 }
 
 App_Layer_Stack :: struct
@@ -43,7 +43,7 @@ App_Layer_Stack_Iter :: struct
     index: int,
 }
 
-App_Info :: struct
+App_State :: struct
 {
     // windows
     // input
@@ -61,7 +61,7 @@ App_Conf :: struct
 
 App :: struct
 {
-    info:  App_Info,
+    state: App_State,
     stack: App_Layer_Stack,
 }
 
@@ -75,19 +75,19 @@ app_make :: proc(allocator := context.allocator) -> (App, bool)
 
     value.stack = app_layer_stack_make(allocator)
 
-    value.info.graphics = graphics_start()
+    value.state.graphics = graphics_start()
 
     return value, true
 }
 
 app_destroy :: proc(self: ^App)
 {
-    graphics_stop(&self.info.graphics)
+    graphics_stop(&self.state.graphics)
 
     app_layer_stack_destroy(&self.stack)
 }
 
-app_push_layer :: proc(self: ^App, value: App_Layer) -> bool 
+app_push_layer :: proc(self: ^App, value: App_Layer) -> bool
 {
     value := app_layer_stack_insert(&self.stack, value)
 
@@ -125,7 +125,7 @@ app_tick :: proc(self: ^App, delta_time: f32)
     iter := app_layer_stack_bottom(&self.stack)
 
     for layer in app_layer_stack_next_above(&iter) {
-        app_layer_tick(layer, &self.info, delta_time)
+        app_layer_tick(layer, &self.state, delta_time)
     }
 }
 
@@ -134,7 +134,7 @@ app_update :: proc(self: ^App, frame_time: f32)
     iter := app_layer_stack_bottom(&self.stack)
 
     for layer in app_layer_stack_next_above(&iter) {
-        app_layer_update(layer, &self.info, frame_time)
+        app_layer_update(layer, &self.state, frame_time)
     }
 }
 
@@ -153,15 +153,17 @@ app_loop :: proc(self: ^App, layer: App_Layer, conf: App_Conf) -> bool
 
     delta_time /= frame_rate
 
-    self.info.active = app_set_layer(self, layer)
+    self.state.active = app_set_layer(self, layer)
 
-    if self.info.active == false {
+    if self.state.active == false {
         return false
     }
 
     for skips := 0; app_layer_stack_len(&self.stack) != 0; skips = 0 {
-        frame_time = time.duration_seconds(
-            time.tick_lap_time(&tick))
+        duration   := time.tick_lap_time(&tick)
+        frame_time  = time.duration_seconds(duration)
+
+        log.debugf("frame_time in seconds = %v", frame_time)
 
         total_time += frame_time
 
@@ -178,7 +180,7 @@ app_loop :: proc(self: ^App, layer: App_Layer, conf: App_Conf) -> bool
 
         // TODO(gio): render flush, swap buffers
 
-        if self.info.active == false { break }
+        if self.state.active == false { break }
     }
 
     return true
@@ -189,32 +191,32 @@ app_layer_default :: proc() -> App_Layer
     return APP_LAYER_DEFAULT
 }
 
-app_layer_load :: proc(self: ^App_Layer, app: ^App_Info) -> bool
+app_layer_load :: proc(self: ^App_Layer, app: ^App_State) -> bool
 {
     return self.proc_load(self.self, app)
 }
 
-app_layer_unload :: proc(self: ^App_Layer, app: ^App_Info)
+app_layer_unload :: proc(self: ^App_Layer, app: ^App_State)
 {
     self.proc_unload(self.self, app)
 }
 
-app_layer_enter :: proc(self: ^App_Layer, app: ^App_Info)
+app_layer_enter :: proc(self: ^App_Layer, app: ^App_State)
 {
     self.proc_enter(self.self, app)
 }
 
-app_layer_leave :: proc(self: ^App_Layer, app: ^App_Info)
+app_layer_leave :: proc(self: ^App_Layer, app: ^App_State)
 {
     self.proc_leave(self.self, app)
 }
 
-app_layer_tick :: proc(self: ^App_Layer, app: ^App_Info, delta_time: f32)
+app_layer_tick :: proc(self: ^App_Layer, app: ^App_State, delta_time: f32)
 {
     self.proc_tick(self.self, app, delta_time)
 }
 
-app_layer_update :: proc(self: ^App_Layer, app: ^App_Info, frame_time: f32)
+app_layer_update :: proc(self: ^App_Layer, app: ^App_State, frame_time: f32)
 {
     self.proc_update(self.self, app, frame_time)
 }

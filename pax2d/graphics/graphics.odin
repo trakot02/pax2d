@@ -8,16 +8,16 @@ import gl "./opengl"
 // Values
 //
 
-VERTEX_ARRAY_DEFAULT := gl.Vertex_Array {}
+VERTEX_BUFFER_LIMIT :: 4096
 
-VERTEX_BUFFER_LIMIT := 4096
+VERTEX_ARRAY_DEFAULT := gl.Vertex_Array {}
 
 VERTEX_LAYOUT_DEFAULT := gl.Vertex_Layout {}
 VERTEX_BUFFER_DEFAULT := gl.Vertex_Buffer {}
 
-SHADER_DEFAULT := gl.Shader {} 
+SHADER_DEFAULT := gl.Shader {}
 
-SAMPLER_SHARP  := gl.Sampler {} 
+SAMPLER_SHARP  := gl.Sampler {}
 SAMPLER_SMOOTH := gl.Sampler {}
 
 TEXTURE_WHITE := gl.Texture {}
@@ -34,48 +34,39 @@ Vertex :: struct
     texture: f32,
 }
 
-State :: struct
+Batch :: struct
 {
     view: ^View,
 
-    vertices: [dynamic]Vertex,
+    textures: gl.Texture_Bundle,
+    samplers: gl.Sampler_Bundle,
 
-    textures: [dynamic]^gl.Texture,
-    samplers: [dynamic]^gl.Sampler,
+    vertices: [dynamic]Vertex,
 }
 
 //
 // Procs
 //
 
-start :: proc(allocator := context.allocator) -> State
+start :: proc()
 {
-    value := State {}
+    VERTEX_ARRAY_DEFAULT = vertex_array_make_default()
 
-    value.vertices = make([dynamic]Vertex, allocator)
+    VERTEX_LAYOUT_DEFAULT = vertex_layout_make_default()
+    VERTEX_BUFFER_DEFAULT = vertex_buffer_make_default(VERTEX_LAYOUT_DEFAULT)
 
-    value.textures = make([dynamic]^gl.Texture, allocator)
-    value.samplers = make([dynamic]^gl.Sampler, allocator)
+    SHADER_DEFAULT = shader_make_default()
 
-    VERTEX_ARRAY_DEFAULT := vertex_array_make_default()
+    SAMPLER_SHARP  = sampler_make_sharp()
+    SAMPLER_SMOOTH = sampler_make_smooth()
 
-    VERTEX_LAYOUT_DEFAULT := vertex_layout_make_default()
-    VERTEX_BUFFER_DEFAULT := vertex_buffer_make_default(VERTEX_LAYOUT_DEFAULT)
-
-    SHADER_DEFAULT := shader_make_default()
-
-    SAMPLER_SHARP  := sampler_make_sharp()
-    SAMPLER_SMOOTH := sampler_make_smooth()
-
-    TEXTURE_WHITE := texture_make_white()
-
-    return value
+    TEXTURE_WHITE = texture_make_white()
 }
 
-stop :: proc(self: ^State)
+stop :: proc()
 {
     gl.texture_destroy(&TEXTURE_WHITE)
-    
+
     gl.sampler_destroy(&SAMPLER_SMOOTH)
     gl.sampler_destroy(&SAMPLER_SHARP)
 
@@ -83,75 +74,145 @@ stop :: proc(self: ^State)
 
     gl.vertex_buffer_destroy(&VERTEX_BUFFER_DEFAULT)
 
-    delete(self.samplers)
-    delete(self.textures)
-
-    delete(self.vertices)
-
-    self.view = nil
-
-    self.vertices = {}
-    self.textures = {}
-    self.samplers = {}
+    gl.vertex_array_destroy(&VERTEX_ARRAY_DEFAULT)
 }
 
-set_viewport :: proc(self: ^State, rect: [4]int)
+set_viewport :: proc(rect: [4]int)
 {
     gl.set_viewport(rect)
 }
 
-set_background_color :: proc(self: ^State, color: [3]f32)
+set_background_color :: proc(color: [3]f32)
 {
     gl.set_background_color(color)
 }
 
-begin :: proc(self: ^State, view: ^View)
+batch_make :: proc(allocator := context.allocator) -> Batch
+{
+    value := Batch {}
+
+    value.vertices = make([dynamic]Vertex, allocator)
+
+    return value
+}
+
+batch_destroy :: proc(self: ^Batch)
+{
+    delete(self.vertices)
+
+    self.vertices = {}
+}
+
+batch_begin :: proc(self: ^Batch, view: ^View)
 {
     self.view = view
 }
 
-end :: proc(self: ^State)
+batch_end :: proc(self: ^Batch)
 {
-    textures := gl.Texture_Bundle {}
-    samplers := gl.Sampler_Bundle {}
-
+    items := len(self.vertices)
     start := 0
     stop  := 0
 
     gl.clear()
 
-    for index in 0 ..< len(self.vertices) {
-        // TODO(gio): update start and stop and push stuff to the bundles, when
-        //            those are full, paint.
+    gl.shader_bind(&SHADER_DEFAULT)
 
-        // gl.vertex_buffer_write_to_front(&VERTEX_BUFFER_DEFAULT,
-        //     self.vertices[start:stop])
+    gl.sampler_bundle_bind(&self.samplers)
+    gl.texture_bundle_bind(&self.textures)
 
-        gl.paint(&SHADER_DEFAULT, &VERTEX_BUFFER_DEFAULT,
-            &textures, &samplers)
+    for items > 0 {
+        delta := min(items, VERTEX_BUFFER_LIMIT)
+
+        items -= delta
+        stop  += delta
+
+        gl.vertex_buffer_write_to_front(&VERTEX_BUFFER_DEFAULT,
+                self.vertices[start:stop])
+
+        gl.paint(&VERTEX_BUFFER_DEFAULT)
+
+        gl.vertex_buffer_clear(&VERTEX_BUFFER_DEFAULT)
 
         start = stop
-
-        gl.texture_bundle_clear(&textures)
-        gl.sampler_bundle_clear(&samplers)
     }
+
+    gl.sampler_bundle_clear(&self.samplers)
+    gl.texture_bundle_clear(&self.textures)
+
+    gl.texture_bundle_unbind()
+    gl.sampler_bundle_unbind()
+
+    gl.shader_unbind()
 
     clear(&self.vertices)
 }
 
-paint_rect :: proc(self: ^State, rect: [4]f32, color: [4]f32, scale: [2]f32)
+batch_rect :: proc(self: ^Batch, rect: [4]f32, color: [4]f32, scale: [2]f32) -> bool
 {
-    // TODO(gio): inserts the vertices inside the state next to the same ones that share the same texture.
+    verts := [4]Vertex {}
+    items := len(self.vertices)
+
+    index := -1
+    other := -1
+    state := true
+
+    index, state = gl.texture_bundle_add(&self.textures, &TEXTURE_WHITE)
+
+    if state == false { return false }
+
+    other, state = gl.sampler_bundle_add(&self.samplers, &SAMPLER_SHARP)
+
+    if state == false { return false }
+    if index != other { return false }
+
+    for &item in verts {
+        item.point   = {rect.x, rect.y}
+        item.texel   = {0, 0}
+
+        item.color   = color
+        item.texture = f32(index)
+    }
+
+    verts[1].point.x += rect.z
+    verts[2].point.y += rect.w
+    verts[3].point.x += rect.z
+    verts[3].point.y += rect.w
+
+    verts[1].texel.x += 1
+    verts[2].texel.y += 1
+    verts[3].texel.x += 1
+    verts[3].texel.y += 1
+
+    indxs := [6]int {0, 2, 1, 1, 2, 3}
+
+    for item in indxs {
+        _, error := append(&self.vertices, verts[item])
+
+        if error != nil {
+            log.errorf("Render_Batch: Unable to add rect vertex")
+
+            resize(&self.vertices, items)
+
+            return false
+        }
+    }
+
+    return true
 }
 
-paint_rect_rotated :: proc(self: ^State, rect: [4]f32, color: [4]f32, angle: f32, pivot: [2]f32)
+batch_rect_rotated :: proc(self: ^Batch, rect: [4]f32, color: [4]f32, angle: f32, pivot: [2]f32) -> bool
 {
     // TODO(gio): inserts the vertices inside the state next to the same ones that share the same texture.
+
+    return false
 }
 
-paint_rect_general :: proc(self: ^State, rect: [4]f32, color: [4]f32, scale: [2]f32, angle: f32, pivot: [2]f32)
+batch_rect_general :: proc(self: ^Batch, rect: [4]f32, color: [4]f32, scale: [2]f32, angle: f32, pivot: [2]f32) -> bool
 {
     // TODO(gio): inserts the vertices inside the state next to the same ones that share the same texture.
+
+    return false
 }
 
 @(private)
@@ -188,7 +249,7 @@ vertex_buffer_make_default :: proc(layout: gl.Vertex_Layout) -> gl.Vertex_Buffer
     if state == false {
         log.debugf("Graphics: Unable to create default vertex buffer")
     }
-    
+
     return value
 }
 

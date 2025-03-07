@@ -26,20 +26,20 @@ Vertex_Buffer :: struct
     items:  int,
 }
 
-Index_Buffer :: struct
-{
-    handle: int,
-    stride: int,
-    bytes:  int,
-    items:  int,
-}
-
 Vertex_Layout_Array :: [VERTEX_ATTRIB_MAX]Shader_Value_Type
 
 Vertex_Layout :: struct
 {
     array: Vertex_Layout_Array,
     items: int,
+}
+
+Index_Buffer :: struct
+{
+    handle: int,
+    stride: int,
+    bytes:  int,
+    items:  int,
 }
 
 //
@@ -123,6 +123,30 @@ vertex_buffer_set_storage :: proc(self: ^Vertex_Buffer, layout: Vertex_Layout, i
     return true
 }
 
+vertex_buffer_set_layout :: proc(self: ^Vertex_Buffer, layout: Vertex_Layout)
+{
+    stride := vertex_layout_get_stride(layout)
+
+    gl.BindBuffer(gl.ARRAY_BUFFER, u32(self.handle))
+
+    defer gl.BindBuffer(gl.ARRAY_BUFFER, 0)
+
+    for index in 0 ..< VERTEX_ATTRIB_MAX {
+        gl.DisableVertexAttribArray(u32(index))
+    }
+
+    for index in 0 ..< layout.items {
+        gl.EnableVertexAttribArray(u32(index))
+
+        offset := vertex_layout_get_attrib_offset(layout, index)
+        items  := vertex_layout_get_attrib_items(layout, index)
+        class  := vertex_layout_get_attrib_class(layout, index)
+
+        gl.VertexAttribPointer(u32(index), i32(items), u32(class),
+            false, i32(stride), uintptr(offset))
+    }
+}
+
 vertex_buffer_write_all :: proc(self: ^Vertex_Buffer, data: []$T) -> bool
 {
     stride := size_of(T)
@@ -170,6 +194,78 @@ vertex_buffer_write_to_range :: proc(self: ^Vertex_Buffer, data: []$T, range: [2
     // TODO(gio): check if range is valid and if items surpass the current level, update them
 
     return false
+}
+
+vertex_layout_add_attrib :: proc(self: ^Vertex_Layout, type: Shader_Value_Type) -> bool
+{
+    index := self.items
+
+    if type == .TYPE_NONE { return false }
+
+    if index >= 0 && index < VERTEX_ATTRIB_MAX {
+        self.items        += 1
+        self.array[index]  = type
+
+        return true
+    }
+
+    return false
+}
+
+vertex_layout_get_attrib_class :: proc(self: Vertex_Layout, index: int) -> int
+{
+    if index >= 0 && index < self.items {
+        value := self.array[index]
+        class := SHADER_VALUE_TYPE_CLASS[value]
+
+        return class
+    }
+
+    return 0
+}
+
+vertex_layout_get_attrib_items :: proc(self: Vertex_Layout, index: int) -> int
+{
+    if index >= 0 && index < self.items {
+        value := self.array[index]
+        count := SHADER_VALUE_TYPE_ITEMS[value]
+
+        return count
+    }
+
+    return 0
+}
+
+vertex_layout_get_attrib_offset :: proc(self: Vertex_Layout, index: int) -> int
+{
+    offset := 0
+
+    if index < 0 || index >= self.items {
+        return offset
+    }
+
+    for other in 1 ..= index {
+        value := self.array[other - 1]
+        bytes := SHADER_VALUE_TYPE_BYTES[value]
+
+        offset += bytes
+    }
+
+    return offset
+}
+
+vertex_layout_get_stride :: proc(self: Vertex_Layout) -> int
+{
+    stride := 0
+
+    for index in 0 ..< self.items {
+        value := self.array[index]
+        bytes := SHADER_VALUE_TYPE_BYTES[value]
+
+        stride += bytes
+    }
+
+    return stride
 }
 
 index_buffer_make :: proc() -> (Index_Buffer, bool)
@@ -295,99 +391,6 @@ index_buffer_write_to_range :: proc(self: ^Index_Buffer, data: []$T, range: [2]i
     // TODO(gio): Check if range is valid and if items surpass the current level, update them
 
     return false
-}
-
-vertex_layout_add_attrib :: proc(self: ^Vertex_Layout, type: Shader_Value_Type) -> bool
-{
-    index := self.items
-
-    if type == .TYPE_NONE { return false }
-
-    if index >= 0 && index < VERTEX_ATTRIB_MAX {
-        self.items        += 1
-        self.array[index]  = type
-
-        return true
-    }
-
-    return false
-}
-
-vertex_layout_get_attrib_class :: proc(self: Vertex_Layout, index: int) -> int
-{
-    if index >= 0 && index < self.items {
-        value := self.array[index]
-        class := SHADER_VALUE_TYPE_CLASS[value]
-
-        return class
-    }
-
-    return 0
-}
-
-vertex_layout_get_attrib_items :: proc(self: Vertex_Layout, index: int) -> int
-{
-    if index >= 0 && index < self.items {
-        value := self.array[index]
-        count := SHADER_VALUE_TYPE_ITEMS[value]
-
-        return count
-    }
-
-    return 0
-}
-
-vertex_layout_get_attrib_offset :: proc(self: Vertex_Layout, index: int) -> int
-{
-    offset := 0
-
-    if index < 0 || index >= self.items {
-        return offset
-    }
-
-    for other in 1 ..= index {
-        value := self.array[other - 1]
-        bytes := SHADER_VALUE_TYPE_BYTES[value]
-
-        offset += bytes
-    }
-
-    return offset
-}
-
-vertex_layout_get_stride :: proc(self: Vertex_Layout) -> int
-{
-    stride := 0
-
-    for index in 0 ..< self.items {
-        value := self.array[index]
-        bytes := SHADER_VALUE_TYPE_BYTES[value]
-
-        stride += bytes
-    }
-
-    return stride
-}
-
-@(private)
-vertex_buffer_set_layout :: proc(self: ^Vertex_Buffer, layout: Vertex_Layout)
-{
-    stride := vertex_layout_get_stride(layout)
-
-    for index in 0 ..< VERTEX_ATTRIB_MAX {
-        gl.DisableVertexAttribArray(u32(index))
-    }
-
-    for index in 0 ..< layout.items {
-        gl.EnableVertexAttribArray(u32(index))
-
-        offset := vertex_layout_get_attrib_offset(layout, index)
-        items  := vertex_layout_get_attrib_items(layout, index)
-        class  := vertex_layout_get_attrib_class(layout, index)
-
-        gl.VertexAttribPointer(u32(index), i32(items), u32(class),
-            false, i32(stride), uintptr(offset))
-    }
 }
 
 // TODO(gio): reintroduce

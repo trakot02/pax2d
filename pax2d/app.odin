@@ -163,8 +163,6 @@ app_loop :: proc(self: ^App, layer: App_Layer, conf: App_Conf) -> bool
         duration   := time.tick_lap_time(&tick)
         frame_time  = time.duration_seconds(duration)
 
-        log.debugf("frame_time in seconds = %v", frame_time)
-
         total_time += frame_time
 
         // TODO(gio): render clear

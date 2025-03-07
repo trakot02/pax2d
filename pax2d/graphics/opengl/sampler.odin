@@ -132,35 +132,31 @@ sampler_bundle_clear :: proc(self: ^Sampler_Bundle)
     self.items = 0
 }
 
-sampler_bundle_find :: proc(self: ^Sampler_Bundle, sampler: ^Sampler) -> (int, bool)
+sampler_bundle_index_of :: proc(self: ^Sampler_Bundle, sampler: ^Sampler) -> int
 {
     for index in 0 ..< self.items {
         value := self.array[index]
 
         if value.handle == sampler.handle {
-            return index, true
+            return index
         }
     }
 
-    return 0, false
+    return SAMPLER_SLOT_MAX
 }
 
-sampler_bundle_add :: proc(self: ^Sampler_Bundle, sampler: ^Sampler) -> (int, bool)
+sampler_bundle_add :: proc(self: ^Sampler_Bundle, sampler: ^Sampler) -> bool
 {
-    index, state := sampler_bundle_find(self, sampler)
-
-    if state == true { return index, state }
-
-    index = self.items
+    index := self.items
 
     if index >= 0 && index < SAMPLER_SLOT_MAX {
         self.items        += 1
         self.array[index]  = sampler
 
-        return index, true
+        return true
     }
 
-    return 0, false
+    return false
 }
 
 sampler_bundle_bind :: proc(self: ^Sampler_Bundle)

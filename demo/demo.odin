@@ -17,17 +17,11 @@ demo_start :: proc()
     glfw.WindowHint(glfw.CONTEXT_VERSION_MINOR, 3)
     glfw.WindowHint(glfw.OPENGL_PROFILE, glfw.OPENGL_CORE_PROFILE)
 
-    WINDOW = glfw.CreateWindow(640, 360, "Pax", nil, nil)
+    WINDOW = glfw.CreateWindow(640, 640, "Pax", nil, nil)
 
     glfw.MakeContextCurrent(WINDOW)
-    // glfw.SwapInterval(1)
 
     gl.load_up_to(3, 3, glfw.gl_set_proc_address)
-
-    // pax
-
-    pax.graphics_set_viewport({0, 0, 640, 360})
-    pax.graphics_set_background_color({1, 1, 1})
 }
 
 demo_stop :: proc()

@@ -200,40 +200,44 @@ texture_write_to_range :: proc(self: ^Texture, layout: Texture_Layout, data: []b
     return true
 }
 
+texture_normalize :: proc(self: ^Texture, point: [2]f32) -> [2]f32
+{
+    return [2]f32 {
+        point.x / f32(self.items.x),
+        point.y / f32(self.items.y),
+    }
+}
+
 texture_bundle_clear :: proc(self: ^Texture_Bundle)
 {
     self.items = 0
 }
 
-texture_bundle_find :: proc(self: ^Texture_Bundle, texture: ^Texture) -> (int, bool)
+texture_bundle_index_of :: proc(self: ^Texture_Bundle, texture: ^Texture) -> int
 {
     for index in 0 ..< self.items {
         value := self.array[index]
 
         if value.handle == texture.handle {
-            return index, true
+            return index
         }
     }
 
-    return 0, false
+    return TEXTURE_SLOT_MAX
 }
 
-texture_bundle_add :: proc(self: ^Texture_Bundle, texture: ^Texture) -> (int, bool)
+texture_bundle_add :: proc(self: ^Texture_Bundle, texture: ^Texture) -> bool
 {
-    index, state := texture_bundle_find(self, texture)
-
-    if state == true { return index, state }
-
-    index = self.items
+    index := self.items
 
     if index >= 0 && index < TEXTURE_SLOT_MAX {
         self.items        += 1
         self.array[index]  = texture
 
-        return index, true
+        return true
     }
 
-    return 0, false
+    return false
 }
 
 texture_bundle_bind :: proc(self: ^Texture_Bundle)

@@ -50,20 +50,29 @@ vertex_array_unbind :: proc()
 
 set_viewport :: proc(rect: [4]int)
 {
-    gl.Viewport(i32(rect.x), i32(rect.y), i32(rect.z), i32(rect.w))
+    left   := i32(rect.x)
+    top    := i32(rect.y)
+    width  := i32(rect.z)
+    height := i32(rect.w)
+
+    gl.Viewport(left, top, width, height)
 }
 
-set_background_color :: proc(color: [3]f32 = {})
+set_clear_color :: proc(color: [3]f32 = {})
 {
-    gl.ClearColor(color.r, color.g, color.b, 1)
+    red   := f32(color.r)
+    green := f32(color.g)
+    blue  := f32(color.b)
+
+    gl.ClearColor(red, green, blue, 1)
 }
 
-clear :: proc()
+clear_buffers :: proc()
 {
     gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
 }
 
-paint :: proc(buffer: ^Vertex_Buffer)
+paint_triangles :: proc(buffer: ^Vertex_Buffer)
 {
     //
     // NOTE(gio): Optional due to the vertex array.

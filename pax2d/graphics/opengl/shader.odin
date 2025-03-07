@@ -50,6 +50,54 @@ Shader_Builder :: struct
 // Procs
 //
 
+shader_make :: proc() -> (Shader, bool)
+{
+    handle := gl.CreateProgram()
+    value  := Shader {}
+
+    if handle != 0 {
+        value.handle = int(handle)
+    }
+
+    return value, handle != 0
+}
+
+shader_make_from_builder :: proc(builder: ^Shader_Builder) -> (Shader, bool)
+{
+    value, state := shader_make()
+
+    if state == false { return value, state }
+
+    state = shader_build(builder, &value)
+
+    if state == false {
+        shader_destroy(&value)
+
+        return {}, false
+    }
+
+    return value, true
+}
+
+shader_destroy :: proc(self: ^Shader)
+{
+    handle := u32(self.handle)
+
+    self.handle = 0
+
+    gl.DeleteProgram(handle)
+}
+
+shader_bind :: proc(self: ^Shader)
+{
+    gl.UseProgram(u32(self.handle))
+}
+
+shader_unbind :: proc()
+{
+    gl.UseProgram(0)
+}
+
 shader_add_stage_from_source :: proc(self: ^Shader_Builder, type: Shader_Stage_Type, source: string) -> bool
 {
     type_value := SHADER_STAGE_TYPE[type]
@@ -97,54 +145,6 @@ shader_build :: proc(self: ^Shader_Builder, shader: ^Shader) -> bool
     self.items = 0
 
     return state
-}
-
-shader_make :: proc() -> (Shader, bool)
-{
-    handle := gl.CreateProgram()
-    value  := Shader {}
-
-    if handle != 0 {
-        value.handle = int(handle)
-    }
-
-    return value, handle != 0
-}
-
-shader_make_from_builder :: proc(builder: ^Shader_Builder) -> (Shader, bool)
-{
-    value, state := shader_make()
-
-    if state == false { return value, state }
-
-    state = shader_build(builder, &value)
-
-    if state == false {
-        shader_destroy(&value)
-
-        return {}, false
-    }
-
-    return value, true
-}
-
-shader_destroy :: proc(self: ^Shader)
-{
-    handle := u32(self.handle)
-
-    self.handle = 0
-
-    gl.DeleteProgram(handle)
-}
-
-shader_bind :: proc(self: ^Shader)
-{
-    gl.UseProgram(u32(self.handle))
-}
-
-shader_unbind :: proc()
-{
-    gl.UseProgram(0)
 }
 
 @(private)

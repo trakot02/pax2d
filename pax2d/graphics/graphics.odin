@@ -1,371 +1,110 @@
 package graphics
 
-import "core:log"
-
-import gl "./opengl"
-
-//
-// Values
-//
-
-VERTEX_BUFFER_LIMIT :: 4096
-
-VERTEX_ARRAY_DEFAULT := gl.Vertex_Array {}
-
-VERTEX_LAYOUT_DEFAULT := gl.Vertex_Layout {}
-VERTEX_BUFFER_DEFAULT := gl.Vertex_Buffer {}
-
-SHADER_DEFAULT := gl.Shader {}
-
-SAMPLER_SHARP  := gl.Sampler {}
-SAMPLER_SMOOTH := gl.Sampler {}
-
-TEXTURE_WHITE := gl.Texture {}
-
-//
-// Types
-//
-
-Vertex :: struct
+State :: struct
 {
-    point:   [2]f32,
-    color:   [4]f32,
-    texel:   [2]f32,
-    texture: f32,
+    rects: Rect_Batch,
 }
 
-Batch :: struct
+start :: proc() -> State
 {
-    view: ^View,
+    value := State {}
 
-    textures: gl.Texture_Bundle,
-    samplers: gl.Sampler_Bundle,
-
-    vertices: [dynamic]Vertex,
-}
-
-//
-// Procs
-//
-
-start :: proc()
-{
     VERTEX_ARRAY_DEFAULT = vertex_array_make_default()
 
-    VERTEX_LAYOUT_DEFAULT = vertex_layout_make_default()
-    VERTEX_BUFFER_DEFAULT = vertex_buffer_make_default(VERTEX_LAYOUT_DEFAULT)
+    VERTEX_LAYOUT_RECT = vertex_layout_make_rect()
+    VERTEX_BUFFER_RECT = vertex_buffer_make_rect(VERTEX_LAYOUT_RECT, VERTEX_BUFFER_RECT_ITEMS)
+    SHADER_RECT        = shader_make_rect()
+    SAMPLER_SHARP      = sampler_make_sharp()
+    SAMPLER_SMOOTH     = sampler_make_smooth()
+    TEXTURE_WHITE      = texture_make_white()
 
-    SHADER_DEFAULT = shader_make_default()
-
-    SAMPLER_SHARP  = sampler_make_sharp()
-    SAMPLER_SMOOTH = sampler_make_smooth()
-
-    TEXTURE_WHITE = texture_make_white()
-}
-
-stop :: proc()
-{
-    gl.texture_destroy(&TEXTURE_WHITE)
-
-    gl.sampler_destroy(&SAMPLER_SMOOTH)
-    gl.sampler_destroy(&SAMPLER_SHARP)
-
-    gl.shader_destroy(&SHADER_DEFAULT)
-
-    gl.vertex_buffer_destroy(&VERTEX_BUFFER_DEFAULT)
-
-    gl.vertex_array_destroy(&VERTEX_ARRAY_DEFAULT)
-}
-
-set_viewport :: proc(rect: [4]int)
-{
-    gl.set_viewport(rect)
-}
-
-set_background_color :: proc(color: [3]f32)
-{
-    gl.set_background_color(color)
-}
-
-batch_make :: proc(allocator := context.allocator) -> Batch
-{
-    value := Batch {}
-
-    value.vertices = make([dynamic]Vertex, allocator)
+    value.rects = rect_batch_make()
 
     return value
 }
 
-batch_destroy :: proc(self: ^Batch)
+stop :: proc(self: ^State)
 {
-    delete(self.vertices)
+    rect_batch_destroy(&self.rects)
 
-    self.vertices = {}
+    texture_destroy(&TEXTURE_WHITE)
+    sampler_destroy(&SAMPLER_SMOOTH)
+    sampler_destroy(&SAMPLER_SHARP)
+    shader_destroy(&SHADER_RECT)
+    vertex_buffer_destroy(&VERTEX_BUFFER_RECT)
+
+    vertex_array_destroy(&VERTEX_ARRAY_DEFAULT)
 }
 
-batch_begin :: proc(self: ^Batch, view: ^View)
+begin :: proc(self: ^State, view: ^View)
 {
-    self.view = view
+    set_viewport(view.viewport)
+
+    rect_batch_begin(&self.rects)
 }
 
-batch_end :: proc(self: ^Batch)
+end :: proc(self: ^State)
 {
-    items := len(self.vertices)
-    start := 0
-    stop  := 0
+    clear_buffers()
 
-    gl.clear()
-
-    gl.shader_bind(&SHADER_DEFAULT)
-
-    gl.sampler_bundle_bind(&self.samplers)
-    gl.texture_bundle_bind(&self.textures)
-
-    for items > 0 {
-        delta := min(items, VERTEX_BUFFER_LIMIT)
-
-        items -= delta
-        stop  += delta
-
-        gl.vertex_buffer_write_to_front(&VERTEX_BUFFER_DEFAULT,
-                self.vertices[start:stop])
-
-        gl.paint(&VERTEX_BUFFER_DEFAULT)
-
-        gl.vertex_buffer_clear(&VERTEX_BUFFER_DEFAULT)
-
-        start = stop
-    }
-
-    gl.sampler_bundle_clear(&self.samplers)
-    gl.texture_bundle_clear(&self.textures)
-
-    gl.texture_bundle_unbind()
-    gl.sampler_bundle_unbind()
-
-    gl.shader_unbind()
-
-    clear(&self.vertices)
+    rect_batch_end(&self.rects)
 }
 
-batch_rect :: proc(self: ^Batch, rect: [4]f32, color: [4]f32, scale: [2]f32) -> bool
+set_background_color :: proc(self: ^State, color: [3]f32)
 {
-    verts := [4]Vertex {}
-    items := len(self.vertices)
-
-    index := -1
-    other := -1
-    state := true
-
-    index, state = gl.texture_bundle_add(&self.textures, &TEXTURE_WHITE)
-
-    if state == false { return false }
-
-    other, state = gl.sampler_bundle_add(&self.samplers, &SAMPLER_SHARP)
-
-    if state == false { return false }
-    if index != other { return false }
-
-    for &item in verts {
-        item.point   = {rect.x, rect.y}
-        item.texel   = {0, 0}
-
-        item.color   = color
-        item.texture = f32(index)
-    }
-
-    verts[1].point.x += rect.z
-    verts[2].point.y += rect.w
-    verts[3].point.x += rect.z
-    verts[3].point.y += rect.w
-
-    verts[1].texel.x += 1
-    verts[2].texel.y += 1
-    verts[3].texel.x += 1
-    verts[3].texel.y += 1
-
-    indxs := [6]int {0, 2, 1, 1, 2, 3}
-
-    for item in indxs {
-        _, error := append(&self.vertices, verts[item])
-
-        if error != nil {
-            log.errorf("Render_Batch: Unable to add rect vertex")
-
-            resize(&self.vertices, items)
-
-            return false
-        }
-    }
-
-    return true
+    set_clear_color(color)
 }
 
-batch_rect_rotated :: proc(self: ^Batch, rect: [4]f32, color: [4]f32, angle: f32, pivot: [2]f32) -> bool
+paint_rect :: proc(self: ^State, rect: [4]f32, color: [4]f32, scale: [2]f32)
 {
-    // TODO(gio): inserts the vertices inside the state next to the same ones that share the same texture.
-
-    return false
+    rect_batch_add(&self.rects, rect, color, scale,
+        {}, &TEXTURE_WHITE, &SAMPLER_SHARP)
 }
 
-batch_rect_general :: proc(self: ^Batch, rect: [4]f32, color: [4]f32, scale: [2]f32, angle: f32, pivot: [2]f32) -> bool
+paint_rect_rotated :: proc(self: ^State, rect: [4]f32, color: [4]f32, angle: f32, pivot: [2]f32)
 {
-    // TODO(gio): inserts the vertices inside the state next to the same ones that share the same texture.
-
-    return false
+    rect_batch_add_rotated(&self.rects, rect, color, angle,
+        pivot, {}, &TEXTURE_WHITE, &SAMPLER_SHARP)
 }
 
-@(private)
-vertex_array_make_default :: proc() -> gl.Vertex_Array
+paint_rect_general :: proc(self: ^State, rect: [4]f32, color: [4]f32, scale: [2]f32, angle: f32, pivot: [2]f32)
 {
-    value, state := gl.vertex_array_make()
-
-    if state == true {
-        gl.vertex_array_bind(&value)
-    }
-
-    return value
+    rect_batch_add_general(&self.rects, rect, color, scale,
+        angle, pivot, {}, &TEXTURE_WHITE, &SAMPLER_SHARP)
 }
 
-@(private)
-vertex_layout_make_default :: proc() -> gl.Vertex_Layout
+paint_sprite :: proc(self: ^State, texture: ^Texture, sprite: [4]int, color: [4]f32, point: [2]f32, scale: [2]f32)
 {
-    layout := gl.Vertex_Layout {}
+    rect := [4]f32 {}
 
-    gl.vertex_layout_add_attrib(&layout, .TYPE_F32_VEC2) // point
-    gl.vertex_layout_add_attrib(&layout, .TYPE_F32_VEC4) // color
-    gl.vertex_layout_add_attrib(&layout, .TYPE_F32_VEC2) // texel
-    gl.vertex_layout_add_attrib(&layout, .TYPE_F32)      // texture
+    rect.xy = point
+    rect.z  = f32(sprite.z)
+    rect.w  = f32(sprite.w)
 
-    return layout
+    rect_batch_add(&self.rects, rect, color, scale,
+        sprite, texture, &SAMPLER_SHARP)
 }
 
-@(private)
-vertex_buffer_make_default :: proc(layout: gl.Vertex_Layout) -> gl.Vertex_Buffer
+paint_sprite_rotated :: proc(self: ^State, texture: ^Texture, sprite: [4]int, color: [4]f32, point: [2]f32, angle: f32, pivot: [2]f32)
 {
-    value, state := gl.vertex_buffer_make_with_storage(
-        layout, VERTEX_BUFFER_LIMIT)
+    rect := [4]f32 {}
 
-    if state == false {
-        log.debugf("Graphics: Unable to create default vertex buffer")
-    }
+    rect.xy = point
+    rect.z  = f32(sprite.z)
+    rect.w  = f32(sprite.w)
 
-    return value
+    rect_batch_add_rotated(&self.rects, rect, color,
+        angle, pivot, sprite, texture, &SAMPLER_SHARP)
 }
 
-@(private)
-shader_make_default :: proc() -> gl.Shader
+paint_sprite_general :: proc(self: ^State, texture: ^Texture, sprite: [4]int, color: [4]f32, point: [2]f32, scale: [2]f32, angle: f32, pivot: [2]f32)
 {
-    builder := gl.Shader_Builder {}
+    rect := [4]f32 {}
 
-    gl.shader_add_stage_from_source(&builder, .STAGE_VERTEX, SHADER_VERTEX_DEFAULT)
-    gl.shader_add_stage_from_source(&builder, .STAGE_PIXEL,  SHADER_PIXEL_DEFAULT)
+    rect.xy = point
+    rect.z  = f32(sprite.z)
+    rect.w  = f32(sprite.w)
 
-    value, state := gl.shader_make_from_builder(&builder)
-
-    if state == false {
-        log.debugf("Graphics: Unable to create default shader")
-    }
-
-    return value
+    rect_batch_add_general(&self.rects, rect, color,
+        scale, angle, pivot, sprite, texture, &SAMPLER_SHARP)
 }
-
-@(private)
-sampler_make_sharp :: proc() -> gl.Sampler
-{
-    value, state := gl.sampler_make()
-
-    if state == false {
-        log.debugf("Graphics: Unable to create default sampler (sharp)")
-
-        return value
-    }
-
-    gl.sampler_set_filtering(&value, .FILTER_MIN, .MODE_NEAREST)
-    gl.sampler_set_filtering(&value, .FILTER_MAG, .MODE_NEAREST)
-
-    gl.sampler_set_wrapping(&value, .AXIS_X, .MODE_REPEAT)
-    gl.sampler_set_wrapping(&value, .AXIS_Y, .MODE_REPEAT)
-
-    return value
-}
-
-@(private)
-sampler_make_smooth :: proc() -> gl.Sampler
-{
-    value, state := gl.sampler_make()
-
-    if state == false {
-        log.debugf("Graphics: Unable to create default sampler (smooth)")
-
-        return value
-    }
-
-    gl.sampler_set_filtering(&value, .FILTER_MIN, .MODE_LINEAR)
-    gl.sampler_set_filtering(&value, .FILTER_MAG, .MODE_LINEAR)
-
-    gl.sampler_set_wrapping(&value, .AXIS_X, .MODE_REPEAT)
-    gl.sampler_set_wrapping(&value, .AXIS_Y, .MODE_REPEAT)
-
-    return value
-}
-
-@(private)
-texture_make_white :: proc() -> gl.Texture
-{
-    value, state := gl.texture_make_with_storage(.LAYOUT_RGB, {1, 1})
-
-    if state == false {
-        log.debugf("Graphics: Unable to create default texture (white)")
-
-        return value
-    }
-
-    gl.texture_write_all(&value, .LAYOUT_RGB, {255, 255, 255})
-
-    return value
-}
-
-@(private)
-SHADER_VERTEX_DEFAULT ::
-`#version 330 core
-
-layout (location = 0) in vec2  b_point;
-layout (location = 1) in vec4  b_color;
-layout (location = 2) in vec2  b_texel;
-layout (location = 3) in float b_texture;
-
-out vec4  v_color;
-out vec2  v_texel;
-out float v_texture;
-
-void main()
-{
-    v_color   = b_color;
-    v_texel   = b_texel;
-    v_texture = b_texture;
-
-    gl_Position = vec4(b_point, 0, 1);
-}
-`
-
-@(private)
-SHADER_PIXEL_DEFAULT ::
-`#version 330 core
-
-in vec4  v_color;
-in vec2  v_texel;
-in float v_texture;
-
-out vec4 p_color;
-
-uniform sampler2D u_samplers[8];
-
-void main()
-{
-    int  index = int(v_texture);
-    vec4 color = texture(u_samplers[index], v_texel);
-
-    p_color = color * v_color;
-}
-`

@@ -6,8 +6,9 @@ import graphics "./graphics"
 // Types
 //
 
-Graphics_State :: graphics.Batch
+Graphics_State :: graphics.State
 View           :: graphics.View
+Texture        :: graphics.Texture
 
 //
 // Procs
@@ -15,48 +16,55 @@ View           :: graphics.View
 
 graphics_start :: proc() -> Graphics_State
 {
-    graphics.start()
-
-    return graphics.batch_make()
+    return graphics.start()
 }
 
 graphics_stop :: proc(self: ^Graphics_State)
 {
-    graphics.batch_destroy(self)
-    graphics.stop()
+    graphics.stop(self)
 }
 
-graphics_set_background_color :: proc(color: [3]f32)
+graphics_set_background_color :: proc(self: ^Graphics_State, color: [3]f32)
 {
-    graphics.set_background_color(color)
-}
-
-graphics_set_viewport :: proc(rect: [4]int)
-{
-    graphics.set_viewport(rect)
+    graphics.set_background_color(self, color)
 }
 
 graphics_begin :: proc(self: ^Graphics_State, view: ^View)
 {
-    graphics.batch_begin(self, view)
+    graphics.begin(self, view)
 }
 
 graphics_end :: proc(self: ^Graphics_State)
 {
-    graphics.batch_end(self)
+    graphics.end(self)
 }
 
 graphics_paint_rect :: proc(self: ^Graphics_State, rect: [4]f32, color: [4]f32, scale: [2]f32 = {1, 1})
 {
-    graphics.batch_rect(self, rect, color, scale)
+    graphics.paint_rect(self, rect, color, scale)
 }
 
-graphics_paint_rect_rotated :: proc(self: ^Graphics_State, rect: [4]f32, color: [4]f32, angle: f32, pivot: [2]f32 = {0.5, 0.5})
+graphics_paint_rect_rotated :: proc(self: ^Graphics_State, rect: [4]f32, color: [4]f32, angle: f32, pivot: [2]f32 = {})
 {
-    graphics.batch_rect_rotated(self, rect, color, angle, pivot)
+    graphics.paint_rect_rotated(self, rect, color, angle, pivot)
 }
 
-graphics_paint_rect_general :: proc(self: ^Graphics_State, rect: [4]f32, color: [4]f32, scale: [2]f32, angle: f32, pivot: [2]f32)
+graphics_paint_rect_general :: proc(self: ^Graphics_State, rect: [4]f32, color: [4]f32, scale: [2]f32, angle: f32, pivot: [2]f32 = {})
 {
-    graphics.batch_rect_general(self, rect, color, scale, angle, pivot)
+    graphics.paint_rect_general(self, rect, color, scale, angle, pivot)
+}
+
+graphics_paint_sprite :: proc(self: ^Graphics_State, texture: ^Texture, sprite: [4]int, color: [4]f32, point: [2]f32, scale: [2]f32)
+{
+    graphics.paint_sprite(self, texture, sprite, color, point, scale)
+}
+
+graphics_paint_sprite_rotated :: proc(self: ^Graphics_State, texture: ^Texture, sprite: [4]int, color: [4]f32, point: [2]f32, angle: f32, pivot: [2]f32)
+{
+    graphics.paint_sprite_rotated(self, texture, sprite, color, point, angle, pivot)
+}
+
+graphics_paint_sprite_general :: proc(self: ^Graphics_State, texture: ^Texture, sprite: [4]int, color: [4]f32, point: [2]f32, scale: [2]f32, angle: f32, pivot: [2]f32)
+{
+    graphics.paint_sprite_general(self, texture, sprite, color, point, scale, angle, pivot)
 }

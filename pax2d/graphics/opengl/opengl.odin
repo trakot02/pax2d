@@ -67,23 +67,27 @@ set_clear_color :: proc(color: [3]f32 = {})
     gl.ClearColor(red, green, blue, 1)
 }
 
-clear_buffers :: proc()
+clear_background :: proc()
 {
     gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
 }
 
-paint_triangles :: proc(buffer: ^Vertex_Buffer)
+paint_triangles :: proc(vertices: ^Vertex_Buffer)
 {
-    //
-    // NOTE(gio): Optional due to the vertex array.
-    //
+    gl.BindBuffer(gl.ARRAY_BUFFER, u32(vertices.handle))
 
-    /**
-     * gl.BindBuffer(gl.ARRAY_BUFFER, u32(buffer.handle))
-     *
-     * defer gl.BindBuffer(gl.ARRAY_BUFFER, 0)
-     *
-     */
+    defer gl.BindBuffer(gl.ARRAY_BUFFER, 0)
 
-    gl.DrawArrays(gl.TRIANGLES, 0, i32(buffer.items))
+    gl.DrawArrays(gl.TRIANGLES, 0, i32(vertices.items))
+}
+
+paint_triangles_indexed :: proc(vertices: ^Vertex_Buffer, indices: ^Index_Buffer)
+{
+    gl.BindBuffer(gl.ARRAY_BUFFER, u32(vertices.handle))
+    gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, u32(indices.handle))
+
+    defer gl.BindBuffer(gl.ARRAY_BUFFER, 0)
+    defer gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, 0)
+
+    gl.DrawElements(gl.TRIANGLES, i32(indices.items), gl.UNSIGNED_INT, nil)
 }

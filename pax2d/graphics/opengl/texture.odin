@@ -12,17 +12,17 @@ TEXTURE_SLOT_MAX :: SAMPLER_SLOT_MAX
 // Types
 //
 
-Texture_Layout :: enum
+Texture_Format :: enum
 {
-    LAYOUT_NONE,
-    LAYOUT_RGB,
-    LAYOUT_RGBA,
+    TEXTURE_NONE,
+    TEXTURE_RGB,
+    TEXTURE_RGBA,
 }
 
 Texture :: struct
 {
     handle: int,
-    layout: Texture_Layout,
+    format: Texture_Format,
     bytes:  int,
     items:  [2]int,
 }
@@ -53,48 +53,29 @@ texture_make :: proc() -> (Texture, bool)
     return value, handle != 0
 }
 
-texture_make_with_storage :: proc(layout: Texture_Layout, items: [2]int) -> (Texture, bool)
+texture_make_with_storage :: proc(format: Texture_Format, items: [2]int) -> (Texture, bool)
 {
     value, state := texture_make()
 
     if state == false { return value, state }
 
-    state = texture_set_storage(&value, layout, items)
+    state = texture_set_storage(&value, format, items)
 
     if state == false {
         texture_destroy(&value)
-
-        return {}, false
     }
 
-    return value, true
+    return value, state
 }
-
-/*
-texture_from_image :: proc(self: ^Texture, image: Image) -> bool
-{
-    format := IMAGE_TO_TEXTURE_FORMAT[image.format]
-
-    if format == .NONE { return false }
-
-    texture_set_storage(self, format, image.items) or_return
-
-    return texture_send_data(self, format, image.data)
-}
-
-texture_from_file :: proc(self: ^Texture, filename: string) -> bool
-{
-    assert(false, "Not implemented yet")
-
-    return false
-}
-*/
 
 texture_destroy :: proc(self: ^Texture)
 {
     handle := u32(self.handle)
 
     self.handle = 0
+    self.format = .TEXTURE_NONE
+    self.bytes  = 0
+    self.items  = {}
 
     gl.DeleteTextures(1, &handle)
 }
@@ -119,11 +100,11 @@ texture_unbind :: proc()
     }
 }
 
-texture_set_storage :: proc(self: ^Texture, layout: Texture_Layout, items: [2]int) -> bool
+texture_set_storage :: proc(self: ^Texture, format: Texture_Format, items: [2]int) -> bool
 {
-    layout_value := TEXTURE_LAYOUT[layout]
+    format_value := TEXTURE_FORMAT[format]
 
-    if layout == .LAYOUT_NONE { return false }
+    if format == .TEXTURE_NONE { return false }
 
     width  := i32(items.x)
     height := i32(items.y)
@@ -133,27 +114,27 @@ texture_set_storage :: proc(self: ^Texture, layout: Texture_Layout, items: [2]in
 
     defer gl.BindTexture(gl.TEXTURE_2D, 0)
 
-    gl.TexImage2D(gl.TEXTURE_2D, 0, i32(layout_value),
+    gl.TexImage2D(gl.TEXTURE_2D, 0, i32(format_value),
         width, height, 0, gl.RGB, gl.UNSIGNED_BYTE, nil)
 
-    comps := TEXTURE_LAYOUT_COMPS[layout]
+    comps := TEXTURE_FORMAT_COMPS[format]
     bytes := comps * items.x * items.y
 
-    self.layout = layout
+    self.format = format
     self.bytes  = bytes
     self.items  = items
 
     return true
 }
 
-texture_write_all :: proc(self: ^Texture, layout: Texture_Layout, data: []byte) -> bool
+texture_write_all :: proc(self: ^Texture, format: Texture_Format, data: []byte) -> bool
 {
-    layout_value := TEXTURE_LAYOUT[layout]
+    format_value := TEXTURE_FORMAT[format]
 
     bytes := len(data)
 
-    if layout == .LAYOUT_NONE { return false }
-    if layout != self.layout  { return false }
+    if format == .TEXTURE_NONE { return false }
+    if format != self.format  { return false }
     if bytes  != self.bytes   { return false }
 
     width  := i32(self.items.x)
@@ -166,17 +147,17 @@ texture_write_all :: proc(self: ^Texture, layout: Texture_Layout, data: []byte) 
 
     // NOTE(gio): map the texture?
     gl.TexSubImage2D(gl.TEXTURE_2D, 0, 0, 0, width, height,
-        u32(layout_value), gl.UNSIGNED_BYTE, &data[0])
+        u32(format_value), gl.UNSIGNED_BYTE, &data[0])
 
     return true
 }
 
-texture_write_to_range :: proc(self: ^Texture, layout: Texture_Layout, data: []byte, range: [4]int) -> bool
+texture_write_to_range :: proc(self: ^Texture, format: Texture_Format, data: []byte, range: [4]int) -> bool
 {
-    layout_value := TEXTURE_LAYOUT[layout]
+    format_value := TEXTURE_FORMAT[format]
 
-    if layout == .LAYOUT_NONE { return false }
-    if layout != self.layout  { return false }
+    if format == .TEXTURE_NONE { return false }
+    if format != self.format  { return false }
 
     left   := (range.x < 0)
     top    := (range.x + range.z >= self.items.x)
@@ -195,7 +176,7 @@ texture_write_to_range :: proc(self: ^Texture, layout: Texture_Layout, data: []b
 
     // NOTE(gio): map the texture?
     gl.TexSubImage2D(gl.TEXTURE_2D, 0, 0, 0, width, height,
-        u32(layout_value), gl.UNSIGNED_BYTE, &data[0])
+        u32(format_value), gl.UNSIGNED_BYTE, &data[0])
 
     return true
 }
@@ -253,24 +234,15 @@ texture_bundle_unbind :: proc()
 }
 
 @(private)
-TEXTURE_LAYOUT_COMPS := [Texture_Layout]int {
-    .LAYOUT_NONE = 0,
-    .LAYOUT_RGB  = 3,
-    .LAYOUT_RGBA = 4,
+TEXTURE_FORMAT_COMPS := [Texture_Format]int {
+    .TEXTURE_NONE = 0,
+    .TEXTURE_RGB  = 3,
+    .TEXTURE_RGBA = 4,
 }
 
-/*
 @(private)
-IMAGE_TO_TEXTURE_LAYOUT := [Image_Format]Texture_Layout {
-    .NONE = .LAYOUT_NONE,
-    .RGB  = .LAYOUT_RGB,
-    .RGBA = .LAYOUT_RGBA,
-}
-*/
-
-@(private)
-TEXTURE_LAYOUT := [Texture_Layout]int {
-    .LAYOUT_NONE = 0,
-    .LAYOUT_RGB  = gl.RGB,
-    .LAYOUT_RGBA = gl.RGBA,
+TEXTURE_FORMAT := [Texture_Format]int {
+    .TEXTURE_NONE = 0,
+    .TEXTURE_RGB  = gl.RGB,
+    .TEXTURE_RGBA = gl.RGBA,
 }

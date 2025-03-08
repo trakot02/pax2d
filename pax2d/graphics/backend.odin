@@ -20,7 +20,7 @@ Sampler_Wrap_Mode   :: gl.Sampler_Wrap_Mode
 Sampler             :: gl.Sampler
 Sampler_Bundle      :: gl.Sampler_Bundle
 
-Texture_Layout :: gl.Texture_Layout
+Texture_Format :: gl.Texture_Format
 Texture        :: gl.Texture
 Texture_Bundle :: gl.Texture_Bundle
 
@@ -38,10 +38,12 @@ vertex_array_destroy :: gl.vertex_array_destroy
 vertex_array_bind    :: gl.vertex_array_bind
 vertex_array_unbind  :: gl.vertex_array_unbind
 
-set_viewport     :: gl.set_viewport
-set_clear_color  :: gl.set_clear_color
-clear_buffers    :: gl.clear_buffers
-paint_triangles  :: gl.paint_triangles
+set_viewport    :: gl.set_viewport
+set_clear_color :: gl.set_clear_color
+
+clear_background        :: gl.clear_background
+paint_triangles         :: gl.paint_triangles
+paint_triangles_indexed :: gl.paint_triangles_indexed
 
 vertex_buffer_make              :: gl.vertex_buffer_make
 vertex_buffer_make_with_storage :: gl.vertex_buffer_make_with_storage
@@ -104,6 +106,85 @@ shader_make_from_builder     :: gl.shader_make_from_builder
 shader_destroy               :: gl.shader_destroy
 shader_bind                  :: gl.shader_bind
 shader_unbind                :: gl.shader_unbind
+shader_write_i32_array       :: gl.shader_write_i32_array
+shader_write_i32             :: gl.shader_write_i32
+shader_write_i32_vec2        :: gl.shader_write_i32_vec2
+shader_write_i32_vec3        :: gl.shader_write_i32_vec3
+shader_write_i32_vec4        :: gl.shader_write_i32_vec4
+shader_write_f32_array       :: gl.shader_write_f32_array
+shader_write_f32             :: gl.shader_write_f32
+shader_write_f32_vec2        :: gl.shader_write_f32_vec2
+shader_write_f32_vec3        :: gl.shader_write_f32_vec3
+shader_write_f32_vec4        :: gl.shader_write_f32_vec4
+shader_write_f32_mat4        :: gl.shader_write_f32_mat4
 shader_add_stage_from_source :: gl.shader_add_stage_from_source
-shader_add_stage_from_file   :: gl.shader_add_stage_from_file
 shader_build                 :: gl.shader_build
+
+texture_write_image_all :: proc(self: ^Texture, image: ^Image) -> bool
+{
+    format := IMAGE_TO_TEXTURE_FORMAT[image.format]
+
+    if self.format == format {
+        return texture_write_all(self, format, image.data)
+    }
+
+    return false
+}
+
+texture_write_image_to_range :: proc(self: ^Texture, image: ^Image, range: [4]int) -> bool
+{
+    // TODO(gio): implement using texture_write_range
+
+    assert(false)
+
+    return false
+}
+
+texture_make_from_image :: proc(image: ^Image) -> (Texture, bool)
+{
+    format := IMAGE_TO_TEXTURE_FORMAT[image.format]
+
+    if format == .TEXTURE_NONE { return {}, false }
+
+    value, state := texture_make_with_storage(format, image.items)
+
+    if state == false { return value, state }
+
+    state = texture_write_all(&value, format, image.data)
+
+    if state == false {
+        texture_destroy(&value)
+    }
+
+    return value, state
+}
+
+texture_make_from_file :: proc(filename: string) -> (Texture, bool)
+{
+    value        := Texture {}
+    image, state := image_from_file(filename)
+
+    if state == false { return value, state }
+
+    value, state = texture_make_from_image(&image)
+
+    image_destroy(&image)
+
+    return value, state
+}
+
+shader_add_stage_from_file :: proc(self: ^Shader_Builder, type: Shader_Stage_Type, filename: string) -> bool
+{
+    // TODO(gio): implement loading the file and then deallocate
+
+    assert(false)
+
+    return false
+}
+
+@(private)
+IMAGE_TO_TEXTURE_FORMAT := [Image_Format]Texture_Format {
+    .IMAGE_NONE = .TEXTURE_NONE,
+    .IMAGE_RGB  = .TEXTURE_RGB,
+    .IMAGE_RGBA = .TEXTURE_RGBA,
+}

@@ -1,4 +1,4 @@
-package pax2d
+package graphics
 
 import "core:log"
 import "core:strings"
@@ -12,13 +12,16 @@ import stbi "vendor:stb/image"
 
 Image_Format :: enum
 {
-    NONE, RGB, RGBA,
+    IMAGE_NONE,
+    IMAGE_RGB,
+    IMAGE_RGBA,
 }
 
 Image :: struct
 {
     format: Image_Format,
-    size:   [2]int,
+    bytes:  int,
+    items:  [2]int,
     data:   []byte,
 }
 
@@ -55,19 +58,20 @@ image_from_file :: proc(filename: string) -> (Image, bool)
         return {}, false
     }
 
+    format := Image_Format.IMAGE_NONE
     length := width * height * chann
-    format := Image_Format.NONE
 
     switch chann {
-        case 3: format = .RGB
-        case 4: format = .RGBA
+        case 3: format = .IMAGE_RGB
+        case 4: format = .IMAGE_RGBA
     }
 
-    if format == .NONE { return {}, false }
+    if format == .IMAGE_NONE {
+        return {}, false
+    }
 
     value.format = format
-    value.size.x = int(width)
-    value.size.y = int(height)
+    value.items  = {int(width), int(height)}
     value.data   = data[:length]
 
     return value, true
@@ -76,4 +80,8 @@ image_from_file :: proc(filename: string) -> (Image, bool)
 image_destroy :: proc(self: ^Image)
 {
     stbi.image_free(&self.data[0])
+
+    self.format = .IMAGE_NONE
+    self.items  = {}
+    self.data   = nil
 }

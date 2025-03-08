@@ -17,13 +17,15 @@ out vec4  v_color;
 out vec2  v_texel;
 out float v_texture;
 
+uniform mat4 u_view;
+
 void main()
 {
     v_color   = a_color;
     v_texel   = a_texel;
     v_texture = a_texture;
 
-    gl_Position = vec4(a_point, 0, 1);
+    gl_Position = u_view * vec4(a_point, 0, 1);
 }
 `
 
@@ -42,18 +44,32 @@ uniform sampler2D u_samplers[8];
 void main()
 {
     int  index = int(v_texture);
-    vec4 color = texture(u_samplers[index], v_texel);
+    vec4 color = vec4(1);
+
+    switch ( index ) {
+        case 0: { color = texture(u_samplers[0], v_texel); } break;
+        case 1: { color = texture(u_samplers[1], v_texel); } break;
+        case 2: { color = texture(u_samplers[2], v_texel); } break;
+        case 3: { color = texture(u_samplers[3], v_texel); } break;
+        case 4: { color = texture(u_samplers[4], v_texel); } break;
+        case 5: { color = texture(u_samplers[5], v_texel); } break;
+        case 6: { color = texture(u_samplers[6], v_texel); } break;
+        case 7: { color = texture(u_samplers[7], v_texel); } break;
+    }
 
     p_color = color * v_color;
 }
 `
 
-VERTEX_BUFFER_RECT_ITEMS :: 6 * 1024 
+VERTEX_BUFFER_RECT_ITEMS :: 4 * 2048 
+INDEX_BUFFER_RECT_ITEMS  :: 6 * 2048
 
 VERTEX_ARRAY_DEFAULT := Vertex_Array {}
 
 VERTEX_LAYOUT_RECT := Vertex_Layout {}
 VERTEX_BUFFER_RECT := Vertex_Buffer {}
+
+INDEX_BUFFER_RECT := Index_Buffer {}
 
 SHADER_RECT := Shader {}
 
@@ -109,6 +125,14 @@ vertex_buffer_make_rect:: proc(layout: Vertex_Layout, items: int) -> Vertex_Buff
     return value
 }
 
+index_buffer_make_rect :: proc(items: int) -> Index_Buffer
+{
+    value, _ := index_buffer_make_with_storage(
+        size_of(u32), items)
+
+    return value
+}
+
 shader_make_rect :: proc() -> Shader
 {
     builder := Shader_Builder {}
@@ -153,11 +177,12 @@ sampler_make_smooth :: proc() -> Sampler
 
 texture_make_white :: proc() -> Texture
 {
-    value, state := texture_make_with_storage(.LAYOUT_RGB, {1, 1})
-
-    if state == true {
-        texture_write_all(&value, .LAYOUT_RGB, {255, 255, 255})
-    }
+    value, _ := texture_make_from_image(&Image {
+        format = .IMAGE_RGB,
+        bytes  = 1,
+        items  = {1, 1},
+        data   = {255, 255, 255},
+    })
 
     return value
 }
@@ -170,17 +195,17 @@ texture_make_white :: proc() -> Texture
 void mainImage(out vec4 fragColor, in vec2 fragCoord)
 {
     vec2 localCoord = fragCoord / iResolution.xy * 2.0 - 1.0;
-    
+
     float distance = length(localCoord);
     float strength = 1.0 - distance;
-    
+
     float thickness = 1.0;
     float blurness  = 0.005;
-    
+
     vec3 color = vec3(smoothstep(0.0, blurness, strength));
-    
+
     color *= vec3(smoothstep(thickness + blurness, thickness, strength));
-    
+
     fragColor = vec4(color, 1.0) * vec4(0.8, 0.3, 0.2, 0.1);
 }
 */

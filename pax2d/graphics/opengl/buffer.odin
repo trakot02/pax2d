@@ -70,11 +70,9 @@ vertex_buffer_make_with_storage :: proc(layout: Vertex_Layout, items: int) -> (V
 
     if state == false {
         vertex_buffer_destroy(&value)
-
-        return {}, false
     }
 
-    return value, true
+    return value, state
 }
 
 vertex_buffer_destroy :: proc(self: ^Vertex_Buffer)
@@ -82,6 +80,7 @@ vertex_buffer_destroy :: proc(self: ^Vertex_Buffer)
     handle := u32(self.handle)
 
     self.handle = 0
+    self.stride = 0
     self.bytes  = 0
     self.items  = 0
 
@@ -115,10 +114,10 @@ vertex_buffer_set_storage :: proc(self: ^Vertex_Buffer, layout: Vertex_Layout, i
     gl.BufferData(gl.ARRAY_BUFFER, bytes, nil,
         gl.DYNAMIC_DRAW)
 
+    vertex_buffer_set_layout(self, layout)
+
     self.stride = stride
     self.bytes  = bytes
-
-    vertex_buffer_set_layout(self, layout)
 
     return true
 }
@@ -145,6 +144,8 @@ vertex_buffer_set_layout :: proc(self: ^Vertex_Buffer, layout: Vertex_Layout)
         gl.VertexAttribPointer(u32(index), i32(items), u32(class),
             false, i32(stride), uintptr(offset))
     }
+
+    self.stride = stride
 }
 
 vertex_buffer_write_all :: proc(self: ^Vertex_Buffer, data: []$T) -> bool
@@ -161,6 +162,7 @@ vertex_buffer_write_all :: proc(self: ^Vertex_Buffer, data: []$T) -> bool
 
     defer gl.BindBuffer(gl.ARRAY_BUFFER, 0)
 
+    // NOTE(gio): map the buffer?
     gl.BufferSubData(gl.ARRAY_BUFFER, 0, bytes, &data[0])
 
     self.items = items
@@ -182,6 +184,7 @@ vertex_buffer_write_to_front :: proc(self: ^Vertex_Buffer, data: []$T) -> bool
 
     defer gl.BindBuffer(gl.ARRAY_BUFFER, 0)
 
+    // NOTE(gio): map the buffer?
     gl.BufferSubData(gl.ARRAY_BUFFER, 0, bytes, &data[0])
 
     self.items = max(self.items, items)
@@ -192,6 +195,8 @@ vertex_buffer_write_to_front :: proc(self: ^Vertex_Buffer, data: []$T) -> bool
 vertex_buffer_write_to_range :: proc(self: ^Vertex_Buffer, data: []$T, range: [2]int) -> bool
 {
     // TODO(gio): check if range is valid and if items surpass the current level, update them
+
+    assert(false)
 
     return false
 }
@@ -292,11 +297,9 @@ index_buffer_make_with_storage :: proc(stride: int, items: int) -> (Index_Buffer
 
     if state == false {
         index_buffer_destroy(&value)
-
-        return {}, false
     }
 
-    return value, true
+    return value, state
 }
 
 index_buffer_destroy :: proc(self: ^Index_Buffer)
@@ -304,6 +307,7 @@ index_buffer_destroy :: proc(self: ^Index_Buffer)
     handle := u32(self.handle)
 
     self.handle = 0
+    self.stride = 0
     self.bytes  = 0
     self.items  = 0
 
@@ -389,6 +393,8 @@ index_buffer_write_to_front :: proc(self: ^Index_Buffer, data: []$T) -> bool
 index_buffer_write_to_range :: proc(self: ^Index_Buffer, data: []$T, range: [2]int) -> bool
 {
     // TODO(gio): Check if range is valid and if items surpass the current level, update them
+
+    assert(false)
 
     return false
 }

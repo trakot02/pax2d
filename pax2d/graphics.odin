@@ -6,13 +6,25 @@ import graphics "./graphics"
 // Types
 //
 
+Vertex_Buffer :: graphics.Vertex_Buffer
+Index_Buffer  :: graphics.Index_Buffer
+
+Shader :: graphics.Shader
+
+Sampler :: graphics.Sampler
+Texture :: graphics.Texture
+
 Graphics_State :: graphics.State
 View           :: graphics.View
-Texture        :: graphics.Texture
 
 //
 // Procs
 //
+
+graphics_texture_make_from_file :: proc(filename: string) -> (Texture, bool)
+{
+    return graphics.texture_make_from_file(filename)
+}
 
 graphics_start :: proc() -> Graphics_State
 {
@@ -44,27 +56,17 @@ graphics_paint_rect :: proc(self: ^Graphics_State, rect: [4]f32, color: [4]f32, 
     graphics.paint_rect(self, rect, color, scale)
 }
 
-graphics_paint_rect_rotated :: proc(self: ^Graphics_State, rect: [4]f32, color: [4]f32, angle: f32, pivot: [2]f32 = {})
+graphics_paint_rect_rotated :: proc(self: ^Graphics_State, rect: [4]f32, color: [4]f32, scale: [2]f32, angle: f32, pivot: [2]f32 = {})
 {
-    graphics.paint_rect_rotated(self, rect, color, angle, pivot)
+    graphics.paint_rect_rotated(self, rect, color, scale, angle, pivot)
 }
 
-graphics_paint_rect_general :: proc(self: ^Graphics_State, rect: [4]f32, color: [4]f32, scale: [2]f32, angle: f32, pivot: [2]f32 = {})
-{
-    graphics.paint_rect_general(self, rect, color, scale, angle, pivot)
-}
-
-graphics_paint_sprite :: proc(self: ^Graphics_State, texture: ^Texture, sprite: [4]int, color: [4]f32, point: [2]f32, scale: [2]f32)
+graphics_paint_sprite :: proc(self: ^Graphics_State, texture: ^Texture, sprite: [4]int, color: [4]f32, point: [2]f32, scale: [2]f32 = {1, 1})
 {
     graphics.paint_sprite(self, texture, sprite, color, point, scale)
 }
 
-graphics_paint_sprite_rotated :: proc(self: ^Graphics_State, texture: ^Texture, sprite: [4]int, color: [4]f32, point: [2]f32, angle: f32, pivot: [2]f32)
+graphics_paint_sprite_rotated :: proc(self: ^Graphics_State, texture: ^Texture, sprite: [4]int, color: [4]f32, point: [2]f32, scale: [2]f32, angle: f32, pivot: [2]f32 = {})
 {
-    graphics.paint_sprite_rotated(self, texture, sprite, color, point, angle, pivot)
-}
-
-graphics_paint_sprite_general :: proc(self: ^Graphics_State, texture: ^Texture, sprite: [4]int, color: [4]f32, point: [2]f32, scale: [2]f32, angle: f32, pivot: [2]f32)
-{
-    graphics.paint_sprite_general(self, texture, sprite, color, point, scale, angle, pivot)
+    graphics.paint_sprite_rotated(self, texture, sprite, color, point, scale, angle, pivot)
 }

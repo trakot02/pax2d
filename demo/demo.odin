@@ -7,7 +7,8 @@ import gl   "vendor:OpenGL"
 
 import pax "../pax2d"
 
-WINDOW := glfw.WindowHandle {}
+WINDOW  := glfw.WindowHandle {}
+TEXTURE := pax.Texture {}
 
 demo_start :: proc()
 {
@@ -17,7 +18,7 @@ demo_start :: proc()
     glfw.WindowHint(glfw.CONTEXT_VERSION_MINOR, 3)
     glfw.WindowHint(glfw.OPENGL_PROFILE, glfw.OPENGL_CORE_PROFILE)
 
-    WINDOW = glfw.CreateWindow(640, 640, "Pax", nil, nil)
+    WINDOW = glfw.CreateWindow(640, 360, "Pax", nil, nil)
 
     glfw.MakeContextCurrent(WINDOW)
 
@@ -42,6 +43,8 @@ main :: proc()
     if state == false { return }
 
     defer pax.app_destroy(&app)
+
+    TEXTURE, _ = pax.graphics_texture_make_from_file("data/atlas.png")
 
     main_layer := Main_Layer {}
 

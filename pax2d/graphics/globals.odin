@@ -61,8 +61,65 @@ void main()
 }
 `
 
-VERTEX_BUFFER_RECT_ITEMS :: 4 * 2048 
-INDEX_BUFFER_RECT_ITEMS  :: 6 * 2048
+SHADER_MSDF_VERTEX :: SHADER_RECT_VERTEX
+
+SHADER_MSDF_PIXEL ::
+`
+#version 330 core
+
+in vec4  v_color;
+in vec2  v_texel;
+in float v_texture;
+
+out vec4 p_color;
+
+uniform float threshold = 0.59;
+uniform float smoothing = 0.01;
+
+uniform sampler2D u_samplers[8];
+
+float median_vec3_comps(float x, float y, float z);
+float median_vec3(vec3 v);
+
+void main()
+{
+    int  index = int(v_texture);
+    vec4 color = vec4(1);
+
+    switch ( index ) {
+        case 0: { color = texture(u_samplers[0], v_texel); } break;
+        case 1: { color = texture(u_samplers[1], v_texel); } break;
+        case 2: { color = texture(u_samplers[2], v_texel); } break;
+        case 3: { color = texture(u_samplers[3], v_texel); } break;
+        case 4: { color = texture(u_samplers[4], v_texel); } break;
+        case 5: { color = texture(u_samplers[5], v_texel); } break;
+        case 6: { color = texture(u_samplers[6], v_texel); } break;
+        case 7: { color = texture(u_samplers[7], v_texel); } break;
+    }
+
+    float start = threshold;
+    float stop  = threshold + smoothing;
+
+    float dist = median_vec3(color.xyz);
+
+    float alpha = smoothstep(start, stop, dist);
+
+    p_color = vec4(v_color.rgb, v_color.a * alpha);
+}
+
+float median_vec3_comps(float x, float y, float z)
+{
+    return max(min(x, y), min(max(x, y), z));
+}
+
+float median_vec3(vec3 v)
+{
+    return median_vec3_comps(v.x, v.y, v.z);
+}
+`
+
+VERTEX_BUFFER_RECT_ITEMS :: 4 * 4096 
+INDEX_BUFFER_RECT_ITEMS  :: 6 * 4096
 
 VERTEX_ARRAY_DEFAULT := Vertex_Array {}
 
@@ -72,6 +129,7 @@ VERTEX_BUFFER_RECT := Vertex_Buffer {}
 INDEX_BUFFER_RECT := Index_Buffer {}
 
 SHADER_RECT := Shader {}
+SHADER_MSDF := Shader {}
 
 SAMPLER_SHARP  := Sampler {}
 SAMPLER_SMOOTH := Sampler {}
@@ -145,6 +203,18 @@ shader_make_rect :: proc() -> Shader
     return value
 }
 
+shader_make_msdf :: proc() -> Shader
+{
+    builder := Shader_Builder {}
+
+    shader_add_stage_from_source(&builder, .STAGE_VERTEX, SHADER_MSDF_VERTEX)
+    shader_add_stage_from_source(&builder, .STAGE_PIXEL,  SHADER_MSDF_PIXEL)
+
+    value, _ := shader_make_from_builder(&builder)
+
+    return value
+}
+
 sampler_make_sharp :: proc() -> Sampler
 {
     value, state := sampler_make()
@@ -165,7 +235,7 @@ sampler_make_smooth :: proc() -> Sampler
     value, state := sampler_make()
 
     if state == true {
-        sampler_set_filtering(&value, .FILTER_MIN, .MODE_LINEAR)
+        sampler_set_filtering(&value, .FILTER_MIN, .MODE_NEAREST)
         sampler_set_filtering(&value, .FILTER_MAG, .MODE_LINEAR)
 
         sampler_set_wrapping(&value, .AXIS_X, .MODE_REPEAT)

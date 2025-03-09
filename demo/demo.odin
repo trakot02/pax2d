@@ -7,8 +7,10 @@ import gl   "vendor:OpenGL"
 
 import pax "../pax2d"
 
-WINDOW  := glfw.WindowHandle {}
-TEXTURE := pax.Texture {}
+WINDOW := glfw.WindowHandle {}
+
+TEXTURE_GRASS   := pax.Texture {}
+TEXTURE_CONSOLA := pax.Texture {}
 
 demo_start :: proc()
 {
@@ -17,6 +19,8 @@ demo_start :: proc()
     glfw.WindowHint(glfw.CONTEXT_VERSION_MAJOR, 3)
     glfw.WindowHint(glfw.CONTEXT_VERSION_MINOR, 3)
     glfw.WindowHint(glfw.OPENGL_PROFILE, glfw.OPENGL_CORE_PROFILE)
+
+    glfw.WindowHint(glfw.SAMPLES, 16)
 
     WINDOW = glfw.CreateWindow(640, 360, "Pax", nil, nil)
 
@@ -44,7 +48,8 @@ main :: proc()
 
     defer pax.app_destroy(&app)
 
-    TEXTURE, _ = pax.graphics_texture_make_from_file("data/atlas.png")
+    TEXTURE_GRASS, _   = pax.graphics_texture_make_from_file("data/grass.png")
+    TEXTURE_CONSOLA, _ = pax.graphics_texture_make_from_file("data/consola.png")
 
     main_layer := Main_Layer {}
 

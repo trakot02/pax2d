@@ -17,6 +17,7 @@ start :: proc() -> State
     INDEX_BUFFER_RECT = index_buffer_make_rect(INDEX_BUFFER_RECT_ITEMS)
 
     SHADER_RECT = shader_make_rect()
+    SHADER_MSDF = shader_make_msdf()
 
     SAMPLER_SHARP  = sampler_make_sharp()
     SAMPLER_SMOOTH = sampler_make_smooth()
@@ -37,6 +38,7 @@ stop :: proc(self: ^State)
     sampler_destroy(&SAMPLER_SMOOTH)
     sampler_destroy(&SAMPLER_SHARP)
 
+    shader_destroy(&SHADER_MSDF)
     shader_destroy(&SHADER_RECT)
 
     index_buffer_destroy(&INDEX_BUFFER_RECT)
@@ -50,7 +52,7 @@ begin :: proc(self: ^State, view: ^View)
 {
     set_viewport(view.viewport)
 
-    rect_batch_begin(&self.rects, view)
+    rect_batch_begin(&self.rects, view, &SHADER_MSDF)
 }
 
 end :: proc(self: ^State)
@@ -60,43 +62,38 @@ end :: proc(self: ^State)
     rect_batch_end(&self.rects)
 }
 
-set_background_color :: proc(self: ^State, color: [3]f32)
-{
-    set_clear_color(color)
-}
-
 paint_rect :: proc(self: ^State, rect: [4]f32, color: [4]f32, scale: [2]f32)
 {
     rect_batch_add(&self.rects, rect, color, scale,
         {}, &TEXTURE_WHITE, &SAMPLER_SHARP)
 }
 
-paint_rect_rotated :: proc(self: ^State, rect: [4]f32, color: [4]f32, scale: [2]f32, angle: f32, pivot: [2]f32)
+paint_rect_rotated :: proc(self: ^State, rect: [4]f32, color: [4]f32, angle: f32, pivot: [2]f32, scale: [2]f32)
 {
     rect_batch_add_rotated(&self.rects, rect, color, scale,
         angle, pivot, {}, &TEXTURE_WHITE, &SAMPLER_SHARP)
 }
 
-paint_sprite :: proc(self: ^State, texture: ^Texture, sprite: [4]int, color: [4]f32, point: [2]f32, scale: [2]f32)
+paint_sprite :: proc(self: ^State, rect: [4]f32, texture: ^Texture, sprite: [4]int, color: [4]f32, scale: [2]f32)
 {
-    rect := [4]f32 {}
-
-    rect.xy = point
-    rect.z  = f32(sprite.z)
-    rect.w  = f32(sprite.w)
-
     rect_batch_add(&self.rects, rect, color, scale,
         sprite, texture, &SAMPLER_SHARP)
 }
 
-paint_sprite_rotated :: proc(self: ^State, texture: ^Texture, sprite: [4]int, color: [4]f32, point: [2]f32, scale: [2]f32, angle: f32, pivot: [2]f32)
+paint_sprite_rotated :: proc(self: ^State, rect: [4]f32, texture: ^Texture, sprite: [4]int, color: [4]f32, angle: f32, pivot: [2]f32, scale: [2]f32)
 {
-    rect := [4]f32 {}
-
-    rect.xy = point
-    rect.z  = f32(sprite.z)
-    rect.w  = f32(sprite.w)
-
     rect_batch_add_rotated(&self.rects, rect, color, scale,
         angle, pivot, sprite, texture, &SAMPLER_SHARP)
+}
+
+paint_glyph :: proc(self: ^State, rect: [4]f32, texture: ^Texture, glyph: [4]int, color: [4]f32, scale: [2]f32)
+{
+    rect_batch_add(&self.rects, rect, color, scale,
+        glyph, texture, &SAMPLER_SMOOTH)
+}
+
+paint_glyph_rotated :: proc(self: ^State, rect: [4]f32, texture: ^Texture, glyph: [4]int, color: [4]f32, angle: f32, pivot: [2]f32, scale: [2]f32)
+{
+    rect_batch_add_rotated(&self.rects, rect, color, scale,
+        angle, pivot, glyph, texture, &SAMPLER_SMOOTH)
 }

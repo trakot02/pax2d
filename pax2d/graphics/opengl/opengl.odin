@@ -67,6 +67,24 @@ set_clear_color :: proc(color: [3]f32 = {})
     gl.ClearColor(red, green, blue, 1)
 }
 
+set_multi_sampling :: proc(state: bool)
+{
+    switch state {
+        case true:  gl.Enable(gl.MULTISAMPLE)
+        case false: gl.Disable(gl.MULTISAMPLE)
+    }
+}
+
+set_blending :: proc(state: bool)
+{
+    switch state {
+        case true:  gl.Enable(gl.BLEND)
+        case false: gl.Disable(gl.BLEND)
+    }
+
+    gl.BlendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
+}
+
 clear_background :: proc()
 {
     gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)

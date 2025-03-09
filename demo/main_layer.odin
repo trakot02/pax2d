@@ -25,19 +25,19 @@ main_layer_tick :: proc(self: ^Main_Layer, app: ^pax.App_State, delta_time: f32)
 
     left  := f32(0)
     top   := f32(0)
-    zoom  := f32(0)
+    zoom  := f32(1)
     angle := f32(0)
 
     if glfw.GetKey(WINDOW, glfw.KEY_LEFT)  == glfw.PRESS { angle += 5 }
     if glfw.GetKey(WINDOW, glfw.KEY_RIGHT) == glfw.PRESS { angle -= 5 }
 
-    if glfw.GetKey(WINDOW, glfw.KEY_UP)   == glfw.PRESS { zoom += 0.05 }
-    if glfw.GetKey(WINDOW, glfw.KEY_DOWN) == glfw.PRESS { zoom -= 0.05 }
+    if glfw.GetKey(WINDOW, glfw.KEY_UP)   == glfw.PRESS { zoom += 0.01 }
+    if glfw.GetKey(WINDOW, glfw.KEY_DOWN) == glfw.PRESS { zoom -= 0.01 }
 
-    if glfw.GetKey(WINDOW, glfw.KEY_W) == glfw.PRESS { top  += 50 }
-    if glfw.GetKey(WINDOW, glfw.KEY_A) == glfw.PRESS { left -= 50 }
-    if glfw.GetKey(WINDOW, glfw.KEY_S) == glfw.PRESS { top  -= 50 }
-    if glfw.GetKey(WINDOW, glfw.KEY_D) == glfw.PRESS { left += 50 }
+    if glfw.GetKey(WINDOW, glfw.KEY_W) == glfw.PRESS { top  += 500 }
+    if glfw.GetKey(WINDOW, glfw.KEY_A) == glfw.PRESS { left -= 500 }
+    if glfw.GetKey(WINDOW, glfw.KEY_S) == glfw.PRESS { top  -= 500 }
+    if glfw.GetKey(WINDOW, glfw.KEY_D) == glfw.PRESS { left += 500 }
 
     self.view.viewport.z = int(width)
     self.view.viewport.w = int(height)
@@ -45,56 +45,68 @@ main_layer_tick :: proc(self: ^Main_Layer, app: ^pax.App_State, delta_time: f32)
     self.view.point.x += left * delta_time
     self.view.point.y += top * delta_time
 
-    self.view.scale += zoom / 2 * delta_time
-
-    if self.view.scale.x < 0 || self.view.scale.y < 0 {
-        self.view.scale = {}
-    }
+    self.view.scale *= zoom
 
     self.view.angle += angle * delta_time
 
     self.time += delta_time
 }
 
+import "core:log"
+import "core:math"
+
 main_layer_update :: proc(self: ^Main_Layer, app: ^pax.App_State, frame_time: f32)
 {
     glfw.PollEvents()
+    glfw.SwapInterval(0)
+
+    pax.graphics_set_clear_color({0.1, 0.1, 0.1})
+    pax.graphics_set_multi_sampling(true)
+    pax.graphics_set_blending(true)
 
     pax.graphics_begin(&app.graphics, &self.view)
 
-    pax.graphics_paint_rect(&app.graphics, {-24, -24, 16, 16}, {0.3, 0.3, 0.3, 1})
-    pax.graphics_paint_rect(&app.graphics, {-24,   8, 16, 16}, {0.3, 0.3, 0.3, 1})
-    pax.graphics_paint_rect(&app.graphics, {  8, -24, 16, 16}, {0.3, 0.3, 0.3, 1})
-    pax.graphics_paint_rect(&app.graphics, {  8,   8, 16, 16}, {0.3, 0.3, 0.3, 1})
+    size_x  := 23
+    size_y  := 32
+    count_x := 64
+    count_y := 64
 
-    pax.graphics_paint_rect_rotated(&app.graphics, {-24, -24, 16, 16},
-        {1, 0, 0, 1}, {1.5, 0.5}, self.time)
+    glyph := [4]int {0, -size_y * 9, size_x, size_y}
+    color := [4]f32 {1, 1, 1, 1}
 
-    pax.graphics_paint_rect_rotated(&app.graphics, {-24, 8, 16, 16},
-        {0, 1, 0, 1}, {0.5, 1.5}, self.time)
+    sine := math.sin(self.time) / 2 + 0.5
 
-    pax.graphics_paint_rect_rotated(&app.graphics, {8, -24, 16, 16},
-        {0, 0, 1, 1}, {1.5, 0.5}, self.time)
+    height := f32(9.0) + sine * 5
+    ratio  := height / f32(size_y)
 
-    pax.graphics_paint_rect_rotated(&app.graphics, {8, 8, 16, 16},
-        {1, 1, 1, 1}, {0.5, 1.5}, self.time)
+    for row in 0 ..< count_y {
+        for col in 0 ..< count_x {
+            rect := [4]f32 {
+                f32(size_x * (col - count_x / 2)),
+                f32(size_y * (row - count_y / 2)),
+                f32(size_x) * ratio,
+                f32(height),
+            }
 
-    pax.graphics_paint_sprite_rotated(&app.graphics, &TEXTURE, {0, 0, 16, 32}, {1, 1, 1, 1}, {-8, 32},
-        {-1, 1}, 0)
+            rect.xy *= ratio 
 
-    pax.graphics_paint_sprite_rotated(&app.graphics, &TEXTURE, {0, 0, 16, 32}, {1, 1, 1, 1}, {18, 32},
-        {1, 1}, 0)
+            pax.graphics_paint_glyph(&app.graphics, rect,
+                &TEXTURE_CONSOLA, glyph, color)
+        }
+    }
 
     pax.graphics_end(&app.graphics)
 
     glfw.SwapBuffers(WINDOW)
+
+    log.debugf("%v", frame_time)
 }
 
 main_app_layer :: proc(self: ^Main_Layer) -> pax.App_Layer
 {
     value := pax.app_layer_default()
 
-    self.view.scale = {0.05, 0.05}
+    self.view.scale = {0.002, 0.002}
 
     value.self = auto_cast self
 

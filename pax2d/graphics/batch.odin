@@ -11,6 +11,8 @@ Rect_Batch :: struct
 {
     view: ^View,
 
+    shader: ^Shader,
+
     textures: Texture_Bundle,
     samplers: Sampler_Bundle,
 
@@ -41,9 +43,10 @@ rect_batch_destroy :: proc(self: ^Rect_Batch)
     self.indices  = {}
 }
 
-rect_batch_begin :: proc(self: ^Rect_Batch, view: ^View)
+rect_batch_begin :: proc(self: ^Rect_Batch, view: ^View, shader: ^Shader)
 {
-    self.view = view
+    self.view   = view
+    self.shader = shader
 }
 
 rect_batch_end :: proc(self: ^Rect_Batch)
@@ -55,13 +58,13 @@ rect_batch_end :: proc(self: ^Rect_Batch)
     start_indices  := 0
     stop_indices   := 0
 
-    shader_write_f32_mat4(&SHADER_RECT, "u_view",
+    shader_write_f32_mat4(self.shader, "u_view",
         view_get_matrix(self.view))
 
-    shader_write_i32_array(&SHADER_RECT, "u_samplers",
+    shader_write_i32_array(self.shader, "u_samplers",
         {0, 1, 2, 3, 4, 5, 6, 7})
 
-    shader_bind(&SHADER_RECT)
+    shader_bind(self.shader)
 
     texture_bundle_bind(&self.textures)
     sampler_bundle_bind(&self.samplers)

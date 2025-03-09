@@ -38,8 +38,10 @@ vertex_array_destroy :: gl.vertex_array_destroy
 vertex_array_bind    :: gl.vertex_array_bind
 vertex_array_unbind  :: gl.vertex_array_unbind
 
-set_viewport    :: gl.set_viewport
-set_clear_color :: gl.set_clear_color
+set_viewport       :: gl.set_viewport
+set_clear_color    :: gl.set_clear_color
+set_multi_sampling :: gl.set_multi_sampling
+set_blending       :: gl.set_blending
 
 clear_background        :: gl.clear_background
 paint_triangles         :: gl.paint_triangles

@@ -50,6 +50,8 @@ image_from_file :: proc(filename: string) -> (Image, bool)
     height := i32 {}
     chann  := i32 {}
 
+    stbi.set_flip_vertically_on_load(1)
+
     data := stbi.load(clone, &width, &height, &chann, 0)
 
     if data == nil {

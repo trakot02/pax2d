@@ -3,42 +3,37 @@ package opengl
 import gl "vendor:OpenGL"
 
 //
-// Values
-//
-
-VERTEX_ATTRIB_MAX :: int(8)
-
-//
 // Types
 //
 
+/*
 Buffer_Usage :: enum
 {
     USAGE_NONE,
-    USAGE_DYNAMIC_READ,
+    USAGE_DYNAMIC_WRITE,
 }
+*/
 
 Vertex_Buffer :: struct
 {
     handle: int,
     stride: int,
-    bytes:  int,
+    length: int,
     items:  int,
-}
-
-Vertex_Layout_Array :: [VERTEX_ATTRIB_MAX]Shader_Value_Type
-
-Vertex_Layout :: struct
-{
-    array: Vertex_Layout_Array,
-    items: int,
 }
 
 Index_Buffer :: struct
 {
     handle: int,
     stride: int,
-    bytes:  int,
+    length: int,
+    items:  int,
+}
+
+Uniform_Buffer :: struct
+{
+    handle: int,
+    length: int,
     items:  int,
 }
 
@@ -60,13 +55,13 @@ vertex_buffer_make :: proc() -> (Vertex_Buffer, bool)
     return value, handle != 0
 }
 
-vertex_buffer_make_with_storage :: proc(layout: Vertex_Layout, items: int) -> (Vertex_Buffer, bool)
+vertex_buffer_alloc :: proc(limit: int, $T: typeid) -> (Vertex_Buffer, bool)
 {
     value, state := vertex_buffer_make()
 
     if state == false { return value, state }
 
-    state = vertex_buffer_set_storage(&value, layout, items)
+    state = vertex_buffer_realloc(&value, limit, T)
 
     if state == false {
         vertex_buffer_destroy(&value)
@@ -81,20 +76,15 @@ vertex_buffer_destroy :: proc(self: ^Vertex_Buffer)
 
     self.handle = 0
     self.stride = 0
-    self.bytes  = 0
+    self.length = 0
     self.items  = 0
 
     gl.DeleteBuffers(1, &handle)
 }
 
-vertex_buffer_bind :: proc(self: ^Vertex_Buffer)
+vertex_buffer_get_size :: proc(self: ^Vertex_Buffer) -> int
 {
-    gl.BindBuffer(gl.ARRAY_BUFFER, u32(self.handle))
-}
-
-vertex_buffer_unbind :: proc()
-{
-    gl.BindBuffer(gl.ARRAY_BUFFER, 0)
+    return self.length / self.stride
 }
 
 vertex_buffer_clear :: proc(self: ^Vertex_Buffer)
@@ -102,68 +92,38 @@ vertex_buffer_clear :: proc(self: ^Vertex_Buffer)
     self.items = 0
 }
 
-vertex_buffer_set_storage :: proc(self: ^Vertex_Buffer, layout: Vertex_Layout, items: int) -> bool
+vertex_buffer_realloc :: proc(self: ^Vertex_Buffer, limit: int, $T: typeid) -> bool
 {
-    stride := vertex_layout_get_stride(layout)
-    bytes  := stride * items
+    stride := size_of(T)
+    length := stride * limit
 
     gl.BindBuffer(gl.ARRAY_BUFFER, u32(self.handle))
 
     defer gl.BindBuffer(gl.ARRAY_BUFFER, 0)
 
-    gl.BufferData(gl.ARRAY_BUFFER, bytes, nil,
+    gl.BufferData(gl.ARRAY_BUFFER, length, nil,
         gl.DYNAMIC_DRAW)
 
-    vertex_buffer_set_layout(self, layout)
-
     self.stride = stride
-    self.bytes  = bytes
+    self.length = length
 
     return true
 }
 
-vertex_buffer_set_layout :: proc(self: ^Vertex_Buffer, layout: Vertex_Layout)
-{
-    stride := vertex_layout_get_stride(layout)
-
-    gl.BindBuffer(gl.ARRAY_BUFFER, u32(self.handle))
-
-    defer gl.BindBuffer(gl.ARRAY_BUFFER, 0)
-
-    for index in 0 ..< VERTEX_ATTRIB_MAX {
-        gl.DisableVertexAttribArray(u32(index))
-    }
-
-    for index in 0 ..< layout.items {
-        gl.EnableVertexAttribArray(u32(index))
-
-        offset := vertex_layout_get_attrib_offset(layout, index)
-        items  := vertex_layout_get_attrib_items(layout, index)
-        class  := vertex_layout_get_attrib_class(layout, index)
-
-        gl.VertexAttribPointer(u32(index), i32(items), u32(class),
-            false, i32(stride), uintptr(offset))
-    }
-
-    self.stride = stride
-}
-
 vertex_buffer_write_all :: proc(self: ^Vertex_Buffer, data: []$T) -> bool
 {
-    stride := size_of(T)
     items  := len(data)
-    bytes  := stride * items
+    stride := size_of(T)
+    length := stride * items
 
-    if self.stride != stride || self.bytes != bytes {
-        return false
-    }
+    if self.stride != stride { return false }
+    if self.length != length { return false }
 
     gl.BindBuffer(gl.ARRAY_BUFFER, u32(self.handle))
 
     defer gl.BindBuffer(gl.ARRAY_BUFFER, 0)
 
-    // NOTE(gio): map the buffer?
-    gl.BufferSubData(gl.ARRAY_BUFFER, 0, bytes, &data[0])
+    gl.BufferSubData(gl.ARRAY_BUFFER, 0, length, &data[0])
 
     self.items = items
 
@@ -172,105 +132,22 @@ vertex_buffer_write_all :: proc(self: ^Vertex_Buffer, data: []$T) -> bool
 
 vertex_buffer_write_to_front :: proc(self: ^Vertex_Buffer, data: []$T) -> bool
 {
-    stride := size_of(T)
     items  := len(data)
-    bytes  := stride * items
+    stride := size_of(T)
+    length := stride * items
 
-    if self.stride != stride || self.bytes < bytes {
-        return false
-    }
+    if self.stride != stride { return false }
+    if self.length  < length { return false }
 
     gl.BindBuffer(gl.ARRAY_BUFFER, u32(self.handle))
 
     defer gl.BindBuffer(gl.ARRAY_BUFFER, 0)
 
-    // NOTE(gio): map the buffer?
-    gl.BufferSubData(gl.ARRAY_BUFFER, 0, bytes, &data[0])
+    gl.BufferSubData(gl.ARRAY_BUFFER, 0, length, &data[0])
 
-    self.items = max(self.items, items)
+    self.items = items
 
     return true
-}
-
-vertex_buffer_write_to_range :: proc(self: ^Vertex_Buffer, data: []$T, range: [2]int) -> bool
-{
-    // TODO(gio): check if range is valid and if items surpass the current level, update them
-
-    assert(false)
-
-    return false
-}
-
-vertex_layout_add_attrib :: proc(self: ^Vertex_Layout, type: Shader_Value_Type) -> bool
-{
-    index := self.items
-
-    if type == .TYPE_NONE { return false }
-
-    if index >= 0 && index < VERTEX_ATTRIB_MAX {
-        self.items        += 1
-        self.array[index]  = type
-
-        return true
-    }
-
-    return false
-}
-
-vertex_layout_get_attrib_class :: proc(self: Vertex_Layout, index: int) -> int
-{
-    if index >= 0 && index < self.items {
-        value := self.array[index]
-        class := SHADER_VALUE_TYPE_CLASS[value]
-
-        return class
-    }
-
-    return 0
-}
-
-vertex_layout_get_attrib_items :: proc(self: Vertex_Layout, index: int) -> int
-{
-    if index >= 0 && index < self.items {
-        value := self.array[index]
-        count := SHADER_VALUE_TYPE_ITEMS[value]
-
-        return count
-    }
-
-    return 0
-}
-
-vertex_layout_get_attrib_offset :: proc(self: Vertex_Layout, index: int) -> int
-{
-    offset := 0
-
-    if index < 0 || index >= self.items {
-        return offset
-    }
-
-    for other in 1 ..= index {
-        value := self.array[other - 1]
-        bytes := SHADER_VALUE_TYPE_BYTES[value]
-
-        offset += bytes
-    }
-
-    return offset
-}
-
-vertex_layout_get_stride :: proc(self: Vertex_Layout) -> int
-{
-    stride := 0
-
-    for index in 0 ..< self.items {
-        value := self.array[index]
-        bytes := SHADER_VALUE_TYPE_BYTES[value]
-
-        stride += bytes
-    }
-
-    return stride
 }
 
 index_buffer_make :: proc() -> (Index_Buffer, bool)
@@ -287,13 +164,13 @@ index_buffer_make :: proc() -> (Index_Buffer, bool)
     return value, handle != 0
 }
 
-index_buffer_make_with_storage :: proc(stride: int, items: int) -> (Index_Buffer, bool)
+index_buffer_alloc :: proc(limit: int, $T: typeid) -> (Index_Buffer, bool)
 {
     value, state := index_buffer_make()
 
     if state == false { return value, state }
 
-    state = index_buffer_set_storage(&value, stride, items)
+    state = index_buffer_realloc(&value, limit, T)
 
     if state == false {
         index_buffer_destroy(&value)
@@ -308,20 +185,15 @@ index_buffer_destroy :: proc(self: ^Index_Buffer)
 
     self.handle = 0
     self.stride = 0
-    self.bytes  = 0
+    self.length = 0
     self.items  = 0
 
     gl.DeleteBuffers(1, &handle)
 }
 
-index_buffer_bind :: proc(self: ^Index_Buffer)
+index_buffer_get_size :: proc(self: ^Index_Buffer) -> int
 {
-    gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, u32(self.handle))
-}
-
-index_buffer_unbind :: proc()
-{
-    gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, 0)
+    return self.length / self.stride
 }
 
 index_buffer_clear :: proc(self: ^Index_Buffer)
@@ -329,39 +201,38 @@ index_buffer_clear :: proc(self: ^Index_Buffer)
     self.items = 0
 }
 
-index_buffer_set_storage :: proc(self: ^Index_Buffer, stride: int, items: int) -> bool
+index_buffer_realloc :: proc(self: ^Index_Buffer, limit: int, $T: typeid) -> bool
 {
-    bytes := stride * items
+    stride := size_of(T)
+    length := stride * limit
 
     gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, u32(self.handle))
 
     defer gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, 0)
 
-    gl.BufferData(gl.ELEMENT_ARRAY_BUFFER, bytes, nil,
+    gl.BufferData(gl.ELEMENT_ARRAY_BUFFER, length, nil,
         gl.DYNAMIC_DRAW)
 
     self.stride = stride
-    self.bytes  = bytes
+    self.length = length
 
     return true
 }
 
 index_buffer_write_all :: proc(self: ^Index_Buffer, data: []$T) -> bool
 {
-    stride := size_of(T)
     items  := len(data)
-    bytes  := stride * items
+    stride := size_of(T)
+    length := stride * items
 
-    if self.stride != stride || self.bytes != bytes {
-        return false
-    }
+    if self.stride != stride { return false }
+    if self.length != length { return false }
 
     gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, u32(self.handle))
 
     defer gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, 0)
 
-    // NOTE(gio): map the buffer?
-    gl.BufferSubData(gl.ELEMENT_ARRAY_BUFFER, 0, bytes, &data[0])
+    gl.BufferSubData(gl.ELEMENT_ARRAY_BUFFER, 0, length, &data[0])
 
     self.items = items
 
@@ -370,38 +241,119 @@ index_buffer_write_all :: proc(self: ^Index_Buffer, data: []$T) -> bool
 
 index_buffer_write_to_front :: proc(self: ^Index_Buffer, data: []$T) -> bool
 {
-    stride := size_of(T)
     items  := len(data)
-    bytes  := stride * items
+    stride := size_of(T)
+    length := stride * items
 
-    if self.stride != stride || self.bytes < bytes {
-        return false
-    }
+    if self.stride != stride { return false }
+    if self.length  < length { return false }
 
     gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, u32(self.handle))
 
     defer gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, 0)
 
-    // NOTE(gio): map the buffer?
-    gl.BufferSubData(gl.ELEMENT_ARRAY_BUFFER, 0, bytes, &data[0])
+    gl.BufferSubData(gl.ELEMENT_ARRAY_BUFFER, 0, length, &data[0])
 
-    self.items = max(self.items, items)
+    self.items = items
 
     return true
 }
 
-index_buffer_write_to_range :: proc(self: ^Index_Buffer, data: []$T, range: [2]int) -> bool
+uniform_buffer_make :: proc() -> (Uniform_Buffer, bool)
 {
-    // TODO(gio): Check if range is valid and if items surpass the current level, update them
+    handle := u32 {}
+    value  := Uniform_Buffer {}
 
-    assert(false)
+    gl.GenBuffers(1, &handle)
 
-    return false
+    if handle != 0 {
+        value.handle = int(handle)
+    }
+
+    return value, handle != 0
 }
 
-// TODO(gio): reintroduce
+uniform_buffer_alloc :: proc(length: int) -> (Uniform_Buffer, bool)
+{
+    value, state := uniform_buffer_make()
+
+    if state == false { return value, state }
+
+    state = uniform_buffer_realloc(&value, length)
+
+    if state == false {
+        uniform_buffer_destroy(&value)
+    }
+
+    return value, state
+}
+
+uniform_buffer_destroy :: proc(self: ^Uniform_Buffer)
+{
+    handle := u32(self.handle)
+
+    self.handle = 0
+    self.length = 0
+    self.items  = 0
+}
+
+uniform_buffer_clear :: proc(self: ^Uniform_Buffer)
+{
+    self.items = 0
+}
+
+uniform_buffer_realloc :: proc(self: ^Uniform_Buffer, length: int) -> bool
+{
+    gl.BindBuffer(gl.UNIFORM_BUFFER, u32(self.handle))
+
+    defer gl.BindBuffer(gl.UNIFORM_BUFFER, 0)
+
+    gl.BufferData(gl.UNIFORM_BUFFER, length, nil,
+        gl.DYNAMIC_DRAW)
+
+    self.length = length
+
+    return true
+}
+
+uniform_buffer_write_all :: proc(self: ^Uniform_Buffer, data: []byte) -> bool
+{
+    length := len(data)
+
+    if self.length != length { return false }
+
+    gl.BindBuffer(gl.UNIFORM_BUFFER, u32(self.handle))
+
+    defer gl.BindBuffer(gl.UNIFORM_BUFFER, 0)
+
+    gl.BufferSubData(gl.UNIFORM_BUFFER, 0, length, &data[0])
+
+    self.items = length
+
+    return true
+}
+
+uniform_buffer_write_to_front :: proc(self: ^Uniform_Buffer, data: []byte) -> bool
+{
+    length := len(data)
+
+    if self.length < length { return false }
+
+    gl.BindBuffer(gl.UNIFORM_BUFFER, u32(self.handle))
+
+    defer gl.BindBuffer(gl.UNIFORM_BUFFER, 0)
+
+    gl.BufferSubData(gl.UNIFORM_BUFFER, 0, length, &data[0])
+
+    self.items = length
+
+    return true
+}
+
+/*
 @(private)
 BUFFER_USAGE := [Buffer_Usage]int {
-    .USAGE_NONE         = 0,
-    .USAGE_DYNAMIC_READ = gl.DYNAMIC_DRAW,
+    .USAGE_NONE          = 0,
+    .USAGE_DYNAMIC_WRITE = gl.DYNAMIC_DRAW,
 }
+*/

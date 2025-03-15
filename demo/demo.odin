@@ -6,11 +6,11 @@ import glfw "vendor:glfw"
 import gl   "vendor:OpenGL"
 
 import pax "../pax2d"
+import gfx "../pax2d/graphics"
 
 WINDOW := glfw.WindowHandle {}
 
-TEXTURE_GRASS   := pax.Texture {}
-TEXTURE_CONSOLA := pax.Texture {}
+TEXTURE_GRASS := gfx.Texture {}
 
 demo_start :: proc()
 {
@@ -48,8 +48,7 @@ main :: proc()
 
     defer pax.app_destroy(&app)
 
-    TEXTURE_GRASS, _   = pax.graphics_texture_make_from_file("data/grass.png")
-    TEXTURE_CONSOLA, _ = pax.graphics_texture_make_from_file("data/consola.png")
+    // TEXTURE_GRASS, _ = gfx.texture_make_from_file("data/grass.png")
 
     main_layer := Main_Layer {}
 

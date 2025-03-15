@@ -1,99 +1,51 @@
 package graphics
 
+//
+// Types
+//
+
 State :: struct
 {
-    rects: Rect_Batch,
+    batch: Quad_Batch,
 }
 
-start :: proc() -> State
+//
+// Procs
+//
+
+start :: proc() -> (State, bool)
 {
     value := State {}
+    state := true
 
-    VERTEX_ARRAY_DEFAULT = vertex_array_make_default()
+    value.batch, state = quad_batch_make()
 
-    VERTEX_LAYOUT_RECT = vertex_layout_make_rect()
-    VERTEX_BUFFER_RECT = vertex_buffer_make_rect(VERTEX_LAYOUT_RECT, VERTEX_BUFFER_RECT_ITEMS)
-
-    INDEX_BUFFER_RECT = index_buffer_make_rect(INDEX_BUFFER_RECT_ITEMS)
-
-    SHADER_RECT = shader_make_rect()
-    SHADER_MSDF = shader_make_msdf()
-
-    SAMPLER_SHARP  = sampler_make_sharp()
-    SAMPLER_SMOOTH = sampler_make_smooth()
-
-    TEXTURE_WHITE = texture_make_white()
-
-    value.rects = rect_batch_make()
-
-    return value
+    return value, state
 }
 
 stop :: proc(self: ^State)
 {
-    rect_batch_destroy(&self.rects)
-
-    texture_destroy(&TEXTURE_WHITE)
-
-    sampler_destroy(&SAMPLER_SMOOTH)
-    sampler_destroy(&SAMPLER_SHARP)
-
-    shader_destroy(&SHADER_MSDF)
-    shader_destroy(&SHADER_RECT)
-
-    index_buffer_destroy(&INDEX_BUFFER_RECT)
-
-    vertex_buffer_destroy(&VERTEX_BUFFER_RECT)
-
-    vertex_array_destroy(&VERTEX_ARRAY_DEFAULT)
+    quad_batch_destroy(&self.batch)
 }
 
-begin :: proc(self: ^State, view: ^View)
+begin :: proc(self: ^State)
 {
-    set_viewport(view.viewport)
-
-    rect_batch_begin(&self.rects, view, &SHADER_MSDF)
+    quad_batch_clear(&self.batch)
 }
 
 end :: proc(self: ^State)
 {
-    clear_background()
+    clear_buffer_any()
 
-    rect_batch_end(&self.rects)
+    quad_batch_write(&self.batch)
 }
 
-paint_rect :: proc(self: ^State, rect: [4]f32, color: [4]f32, scale: [2]f32)
+paint_rect_rotated :: proc(self: ^State, bounds: [4]f32, color: [4]f32, angle: f32, pivot: [2]f32 = {0, 0}, scale: [2]f32 = {1, 1})
 {
-    rect_batch_add(&self.rects, rect, color, scale,
-        {}, &TEXTURE_WHITE, &SAMPLER_SHARP)
-}
-
-paint_rect_rotated :: proc(self: ^State, rect: [4]f32, color: [4]f32, angle: f32, pivot: [2]f32, scale: [2]f32)
-{
-    rect_batch_add_rotated(&self.rects, rect, color, scale,
-        angle, pivot, {}, &TEXTURE_WHITE, &SAMPLER_SHARP)
-}
-
-paint_sprite :: proc(self: ^State, rect: [4]f32, texture: ^Texture, sprite: [4]int, color: [4]f32, scale: [2]f32)
-{
-    rect_batch_add(&self.rects, rect, color, scale,
-        sprite, texture, &SAMPLER_SHARP)
-}
-
-paint_sprite_rotated :: proc(self: ^State, rect: [4]f32, texture: ^Texture, sprite: [4]int, color: [4]f32, angle: f32, pivot: [2]f32, scale: [2]f32)
-{
-    rect_batch_add_rotated(&self.rects, rect, color, scale,
-        angle, pivot, sprite, texture, &SAMPLER_SHARP)
-}
-
-paint_glyph :: proc(self: ^State, rect: [4]f32, texture: ^Texture, glyph: [4]int, color: [4]f32, scale: [2]f32)
-{
-    rect_batch_add(&self.rects, rect, color, scale,
-        glyph, texture, &SAMPLER_SMOOTH)
-}
-
-paint_glyph_rotated :: proc(self: ^State, rect: [4]f32, texture: ^Texture, glyph: [4]int, color: [4]f32, angle: f32, pivot: [2]f32, scale: [2]f32)
-{
-    rect_batch_add_rotated(&self.rects, rect, color, scale,
-        angle, pivot, glyph, texture, &SAMPLER_SMOOTH)
+    quad_batch_add(&self.batch, {
+        { vertex_coords = bounds.xy,                 vertex_color = color, },
+        { vertex_coords = bounds.xy + {0, bounds.w}, vertex_color = color, },
+        { vertex_coords = bounds.xy + {bounds.z, 0}, vertex_color = color, },
+        { vertex_coords = bounds.xy + bounds.zw,     vertex_color = color, },
+    })
 }

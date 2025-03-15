@@ -3,6 +3,8 @@ package pax2d
 import "core:log"
 import "core:time"
 
+import gfx "./graphics"
+
 //
 // Values
 //
@@ -48,7 +50,7 @@ App_State :: struct
     // windows
     // input
 
-    graphics: Graphics_State,
+    using graphics: gfx.State,
 
     active: bool,
 }
@@ -71,18 +73,21 @@ App :: struct
 
 app_make :: proc(allocator := context.allocator) -> (App, bool)
 {
-    value := App {}
+    value           := App {}
+    graphics, state := gfx.start()
+
+    if state == false { return value, state }
+
+    value.state.graphics = graphics
 
     value.stack = app_layer_stack_make(allocator)
-
-    value.state.graphics = graphics_start()
 
     return value, true
 }
 
 app_destroy :: proc(self: ^App)
 {
-    graphics_stop(&self.state.graphics)
+    gfx.stop(&self.state.graphics)
 
     app_layer_stack_destroy(&self.stack)
 }
@@ -221,9 +226,11 @@ app_layer_update :: proc(self: ^App_Layer, app: ^App_State, frame_time: f32)
 
 app_layer_stack_make :: proc(allocator := context.allocator) -> App_Layer_Stack
 {
-    return App_Layer_Stack {
-        items = make([dynamic]App_Layer, allocator)
-    }
+    value := App_Layer_Stack {}
+
+    value.items = make([dynamic]App_Layer, allocator)
+
+    return value
 }
 
 app_layer_stack_destroy :: proc(self: ^App_Layer_Stack)
@@ -274,9 +281,11 @@ app_layer_stack_remove :: proc(self: ^App_Layer_Stack) -> (App_Layer, bool)
 
 app_layer_stack_bottom :: proc(self: ^App_Layer_Stack) -> App_Layer_Stack_Iter
 {
-    return App_Layer_Stack_Iter {
-        stack = self,
-    }
+    value := App_Layer_Stack_Iter {}
+
+    value.stack = self
+
+    return value
 }
 
 app_layer_stack_next_above :: proc(self: ^App_Layer_Stack_Iter) -> (^App_Layer, int, bool)

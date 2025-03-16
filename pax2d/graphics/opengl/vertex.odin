@@ -36,11 +36,6 @@ Vertex_Layout :: struct
     items: int,
 }
 
-Vertex_Spec :: struct
-{
-    handle: int,
-}
-
 //
 // Procs
 //
@@ -106,63 +101,6 @@ vertex_layout_get_stride :: proc(self: ^Vertex_Layout) -> int
     }
 
     return stride
-}
-
-vertex_spec_make :: proc() -> (Vertex_Spec, bool)
-{
-    handle := u32 {}
-    value  := Vertex_Spec {}
-
-    gl.GenVertexArrays(1, &handle)
-
-    if handle != 0 {
-        value.handle = int(handle)
-    }
-
-    return value, handle != 0
-}
-
-vertex_spec_destroy :: proc(self: ^Vertex_Spec)
-{
-    handle := u32(self.handle)
-
-    self.handle = 0
-
-    gl.DeleteVertexArrays(1, &handle)
-}
-
-vertex_spec_apply :: proc(self: ^Vertex_Spec, layout: ^Vertex_Layout, vertices: ^Vertex_Buffer, indices: ^Index_Buffer) -> bool
-{
-    if vertices == nil || layout == nil { return false }
-
-    gl.BindVertexArray(u32(self.handle))
-
-    gl.BindBuffer(gl.ARRAY_BUFFER, u32(vertices.handle))
-
-    if indices != nil {
-        gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, u32(indices.handle))
-    }
-
-    defer gl.BindVertexArray(0)
-
-    stride := vertex_layout_get_stride(layout)
-
-    for item in 0 ..< layout.items {
-        gl.EnableVertexAttribArray(u32(item))
-
-        offset := vertex_layout_get_offset(layout, item)
-        kind   := vertex_layout_get_kind(layout, item)
-        mult   := vertex_layout_get_mult(layout, item)
-
-        gl.VertexAttribPointer(u32(item), i32(mult), u32(kind),
-            false, i32(stride), uintptr(offset))
-    }
-
-    for item in layout.items ..< len(layout.array) {
-        gl.DisableVertexAttribArray(u32(item))
-    }
-
-    return true
 }
 
 @(private)

@@ -150,14 +150,48 @@ shader_find_uniform :: proc(self: ^Shader, name: string) -> (int, bool)
     return 0, false
 }
 
-shader_execute :: proc(self: ^Shader, mesh: ^Mesh)
+shader_write_i32 :: proc(self: ^Shader, name: string, value: i32) -> bool
 {
-    vertices := mesh.vertices.items
-    indices  := mesh.indices.items
+    uniform, state := shader_find_uniform(self, name)
 
-    gl.BindVertexArray(u32(mesh.spec.handle))
+    if state == true {
+        gl.Uniform1i(i32(uniform), value)
+    }
+
+    return state
+}
+
+shader_execute :: proc(self: ^Shader, geometry: ^Geometry_Batch, textures: ^Texture_Table)
+{
+    samplers := []string {
+        "u_textures[0]",
+        "u_textures[1]",
+        "u_textures[2]",
+        "u_textures[3]",
+        "u_textures[4]",
+        "u_textures[5]",
+        "u_textures[6]",
+        "u_textures[7]",
+    }
+
+    vertices := geometry.vertices.items
+    indices  := geometry.indices.items
+
+    gl.BindVertexArray(u32(geometry.handle))
 
     gl.UseProgram(u32(self.handle))
+
+    for item in 0 ..< textures.items {
+        texture := textures.array[item].texture
+        sampler := textures.array[item].sampler
+
+        gl.ActiveTexture(gl.TEXTURE0 + u32(item))
+
+        gl.BindTexture(gl.TEXTURE_2D, u32(texture.handle))
+        gl.BindSampler(u32(item), u32(sampler.handle))
+
+        shader_write_i32(self, samplers[item], i32(item))
+    }
 
     // bind and write uniforms
 

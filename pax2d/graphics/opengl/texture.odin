@@ -65,6 +65,12 @@ Texture_Slot :: struct
     sampler: ^Sampler,
 }
 
+Texture_Table :: struct
+{
+    array: [TEXTURE_SLOT_MAX]Texture_Slot,
+    items: int,
+}
+
 //
 // Procs
 //
@@ -164,8 +170,7 @@ texture_destroy :: proc(self: ^Texture)
 texture_get_size :: proc(self: ^Texture) -> [2]int
 {
     size := [2]int {
-        self.length % self.stride,
-        self.length / self.stride,
+        self.stride, self.length / self.stride,
     }
 
     return size
@@ -173,8 +178,8 @@ texture_get_size :: proc(self: ^Texture) -> [2]int
 
 texture_realloc :: proc(self: ^Texture, format: Texture_Format, limit: [2]int) -> bool
 {
-    length := TEXTURE_FORMAT_MULT[format] * limit.x * limit.y
-    stride := TEXTURE_FORMAT_MULT[format] * limit.x
+    length := limit.x * limit.y
+    stride := limit.x
 
     if format == .TEXTURE_NONE { return false }
 
@@ -200,6 +205,8 @@ texture_write_all :: proc(self: ^Texture, format: Texture_Format, data: []byte) 
     length := len(data)
 
     if format == .TEXTURE_NONE { return false }
+
+    length /= TEXTURE_FORMAT_MULT[format]
 
     format_value := TEXTURE_FORMAT[format]
 
@@ -262,6 +269,47 @@ texture_normalize_coords :: proc(self: ^Texture, point: [2]f32) -> [2]f32
     }
 
     return value
+}
+
+texture_slot_is_equal :: proc(value: Texture_Slot, other: Texture_Slot) -> bool
+{
+    if value.texture == nil || other.texture == nil { return false }
+    if value.sampler == nil || other.sampler == nil { return false }
+
+    return value.texture.handle == other.texture.handle &&
+           value.sampler.handle == other.sampler.handle
+}
+
+texture_table_clear :: proc(self: ^Texture_Table)
+{
+    self.items = 0
+}
+
+texture_table_add :: proc(self: ^Texture_Table, value: Texture_Slot) -> bool
+{
+    index := self.items
+
+    if index >= 0 && index < len(self.array) {
+        self.items        += 1
+        self.array[index]  = value
+
+        return true
+    }
+
+    return false
+}
+
+texture_table_index_of :: proc(self: ^Texture_Table, value: Texture_Slot) -> (int, bool)
+{
+    for index in 0 ..< self.items {
+        other := self.array[index]
+
+        if texture_slot_is_equal(value, other) {
+            return index, true
+        }
+    }
+
+    return 0, false
 }
 
 @(private)

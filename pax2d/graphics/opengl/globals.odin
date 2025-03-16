@@ -70,6 +70,11 @@ set_viewport :: proc(viewport: [4]int)
     gl.Viewport(left, top, width, height)
 }
 
+clear_buffer :: proc()
+{
+    gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
+}
+
 clear_buffer_color :: proc()
 {
     gl.Clear(gl.COLOR_BUFFER_BIT)
@@ -78,9 +83,4 @@ clear_buffer_color :: proc()
 clear_buffer_depth :: proc()
 {
     gl.Clear(gl.DEPTH_BUFFER_BIT)
-}
-
-clear_buffer_any :: proc()
-{
-    gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
 }

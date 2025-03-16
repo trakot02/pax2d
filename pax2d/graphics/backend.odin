@@ -19,10 +19,11 @@ Blending :: gl.Blending
 Vertex_Attrib_Type :: gl.Vertex_Attrib_Type
 Vertex_Attrib      :: gl.Vertex_Attrib
 Vertex_Layout      :: gl.Vertex_Layout
-Vertex_Spec        :: gl.Vertex_Spec
 
 Vertex_Buffer  :: gl.Vertex_Buffer
+
 Index_Buffer   :: gl.Index_Buffer
+
 Uniform_Buffer :: gl.Uniform_Buffer
 
 Sampler_Filter      :: gl.Sampler_Filter
@@ -33,8 +34,10 @@ Sampler             :: gl.Sampler
 
 Texture_Format :: gl.Texture_Format
 Texture        :: gl.Texture
+Texture_Slot   :: gl.Texture_Slot
+Texture_Table  :: gl.Texture_Table
 
-Mesh :: gl.Mesh
+Geometry_Batch :: gl.Geometry_Batch
 
 Shader_Stage   :: gl.Shader_Stage
 Shader_Builder :: gl.Shader_Builder
@@ -50,9 +53,9 @@ set_depth_testing  :: gl.set_depth_testing
 set_blending       :: gl.set_blending
 set_viewport       :: gl.set_viewport
 
+clear_buffer       :: gl.clear_buffer
 clear_buffer_color :: gl.clear_buffer_color
 clear_buffer_depth :: gl.clear_buffer_depth
-clear_buffer_any   :: gl.clear_buffer_any
 
 vertex_layout_clear      :: gl.vertex_layout_clear
 vertex_layout_add        :: gl.vertex_layout_add
@@ -61,35 +64,31 @@ vertex_layout_get_mult   :: gl.vertex_layout_get_mult
 vertex_layout_get_offset :: gl.vertex_layout_get_offset
 vertex_layout_get_stride :: gl.vertex_layout_get_stride
 
-vertex_spec_make    :: gl.vertex_spec_make
-vertex_spec_destroy :: gl.vertex_spec_destroy
-vertex_spec_apply   :: gl.vertex_spec_apply
+vertex_buffer_make           :: gl.vertex_buffer_make
+vertex_buffer_alloc          :: gl.vertex_buffer_alloc
+vertex_buffer_destroy        :: gl.vertex_buffer_destroy
+vertex_buffer_get_size       :: gl.vertex_buffer_get_size
+vertex_buffer_clear          :: gl.vertex_buffer_clear
+vertex_buffer_realloc        :: gl.vertex_buffer_realloc
+vertex_buffer_write_all      :: gl.vertex_buffer_write_all
+vertex_buffer_write_to_front :: gl.vertex_buffer_write_to_front
 
-vertex_buffer_make              :: gl.vertex_buffer_make
-vertex_buffer_make_with_storage :: gl.vertex_buffer_alloc
-vertex_buffer_destroy           :: gl.vertex_buffer_destroy
-vertex_buffer_get_size          :: gl.vertex_buffer_get_size
-vertex_buffer_clear             :: gl.vertex_buffer_clear
-vertex_buffer_set_storage       :: gl.vertex_buffer_realloc
-vertex_buffer_write_all         :: gl.vertex_buffer_write_all
-vertex_buffer_write_to_front    :: gl.vertex_buffer_write_to_front
+index_buffer_make           :: gl.index_buffer_make
+index_buffer_alloc          :: gl.index_buffer_alloc
+index_buffer_destroy        :: gl.index_buffer_destroy
+index_buffer_get_size       :: gl.index_buffer_get_size
+index_buffer_clear          :: gl.index_buffer_clear
+index_buffer_realloc        :: gl.index_buffer_realloc
+index_buffer_write_all      :: gl.index_buffer_write_all
+index_buffer_write_to_front :: gl.index_buffer_write_to_front
 
-index_buffer_make              :: gl.index_buffer_make
-index_buffer_make_with_storage :: gl.index_buffer_alloc
-index_buffer_destroy           :: gl.index_buffer_destroy
-index_buffer_get_size          :: gl.index_buffer_get_size
-index_buffer_clear             :: gl.index_buffer_clear
-index_buffer_set_storage       :: gl.index_buffer_realloc
-index_buffer_write_all         :: gl.index_buffer_write_all
-index_buffer_write_to_front    :: gl.index_buffer_write_to_front
-
-uniform_buffer_make              :: gl.uniform_buffer_make
-uniform_buffer_make_with_storage :: gl.uniform_buffer_alloc
-uniform_buffer_destroy           :: gl.uniform_buffer_destroy
-uniform_buffer_clear             :: gl.uniform_buffer_clear
-uniform_buffer_set_storage       :: gl.uniform_buffer_realloc
-uniform_buffer_write_all         :: gl.uniform_buffer_write_all
-uniform_buffer_write_to_front    :: gl.uniform_buffer_write_to_front
+uniform_buffer_make           :: gl.uniform_buffer_make
+uniform_buffer_alloc          :: gl.uniform_buffer_alloc
+uniform_buffer_destroy        :: gl.uniform_buffer_destroy
+uniform_buffer_clear          :: gl.uniform_buffer_clear
+uniform_buffer_realloc        :: gl.uniform_buffer_realloc
+uniform_buffer_write_all      :: gl.uniform_buffer_write_all
+uniform_buffer_write_to_front :: gl.uniform_buffer_write_to_front
 
 sampler_make              :: gl.sampler_make
 sampler_destroy           :: gl.sampler_destroy
@@ -97,19 +96,27 @@ sampler_set_filtering     :: gl.sampler_set_filtering
 sampler_set_wrapping      :: gl.sampler_set_wrapping
 
 texture_make              :: gl.texture_make
-texture_make_with_storage :: gl.texture_alloc
+texture_alloc             :: gl.texture_alloc
 texture_destroy           :: gl.texture_destroy
 texture_get_size          :: gl.texture_get_size
-texture_set_storage       :: gl.texture_realloc
+texture_realloc           :: gl.texture_realloc
 texture_write_all         :: gl.texture_write_all
 texture_normalize_coords  :: gl.texture_normalize_coords
+texture_slot_is_equal     :: gl.texture_slot_is_equal
+texture_table_clear       :: gl.texture_table_clear
+texture_table_add         :: gl.texture_table_add
+texture_table_index_of    :: gl.texture_table_index_of
 
-mesh_make           :: gl.mesh_make
-mesh_destroy        :: gl.mesh_destroy
-mesh_clear          :: gl.mesh_clear
-mesh_apply_layout   :: gl.mesh_apply_layout
-mesh_write_vertices :: gl.mesh_write_vertices
-mesh_write_indices  :: gl.mesh_write_indices
+geometry_batch_make            :: gl.geometry_batch_make
+geometry_batch_alloc           :: gl.geometry_batch_alloc
+geometry_batch_destroy         :: gl.geometry_batch_destroy
+geometry_batch_get_vertex_size :: gl.geometry_batch_get_vertex_size
+geometry_batch_set_index_size  :: gl.geometry_batch_get_index_size
+geometry_batch_clear           :: gl.geometry_batch_clear
+geometry_batch_realloc         :: gl.geometry_batch_realloc
+geometry_batch_apply_layout    :: gl.geometry_batch_apply_layout
+geometry_batch_write_all       :: gl.geometry_batch_write_all
+geometry_batch_write_to_front  :: gl.geometry_batch_write_to_front
 
 shader_builder_clear      :: gl.shader_builder_clear
 shader_builder_add_stage  :: gl.shader_builder_add_stage

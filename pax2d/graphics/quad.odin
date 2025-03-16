@@ -18,18 +18,18 @@ layout (std140, binding = 0) uniform View {
 
 layout (location = 0) in vec2  a_vertex_coords;
 layout (location = 1) in vec4  a_vertex_color;
-layout (location = 2) in ivec2 a_texture_coords;
-layout (location = 3) in int   a_sampler_index;
+layout (location = 2) in vec2  a_texture_coords;
+layout (location = 3) in float a_texture_index;
 
 out vec4  v_vertex_color;
-out ivec2 v_texture_coords;
-out int   v_sampler_index;
+out vec2  v_texture_coords;
+out float v_texture_index;
 
 void main()
 {
     v_vertex_color   = a_vertex_color;
     v_texture_coords = a_texture_coords;
-    v_sampler_index  = a_sampler_index;
+    v_texture_index  = a_texture_index;
 
     gl_Position = /* u_view * */ vec4(a_vertex_coords, 0, 1);
 }
@@ -41,36 +41,33 @@ QUAD_PIXEL_SHADER ::
 
 #define TEXTURE_SLOT_MAX 8
 
-// uniform sampler2D u_samplers[TEXTURE_SLOT_MAX];
+uniform sampler2D u_textures[TEXTURE_SLOT_MAX];
 
 in vec4  v_vertex_color;
-in ivec2 v_texture_coords;
-in int   v_sampler_index;
+in vec2  v_texture_coords;
+in float v_texture_index;
 
 out vec4 p_pixel_color;
 
 void main()
 {
-    vec4 texture_value = vec4(1);
+    vec2 texture_coords = v_texture_coords;
+    int  texture_index  = int(v_texture_index);
 
-    // texture_value = texelFetch(u_samplers[v_sampler_index], v_texture_coords);
+    p_pixel_color = v_vertex_color;
 
-/*
-    switch ( v_sampler_index ) {
-        case 0: { texture_value = texelFetch(u_samplers[0], v_texture_coords); } break;
-        case 1: { texture_value = texelFetch(u_samplers[1], v_texture_coords); } break;
-        case 2: { texture_value = texelFetch(u_samplers[2], v_texture_coords); } break;
-        case 3: { texture_value = texelFetch(u_samplers[3], v_texture_coords); } break;
-        case 4: { texture_value = texelFetch(u_samplers[4], v_texture_coords); } break;
-        case 5: { texture_value = texelFetch(u_samplers[5], v_texture_coords); } break;
-        case 6: { texture_value = texelFetch(u_samplers[6], v_texture_coords); } break;
-        case 7: { texture_value = texelFetch(u_samplers[7], v_texture_coords); } break;
+    switch ( texture_index ) {
+        case 0: { p_pixel_color *= texture(u_textures[0], texture_coords, 0); } break;
+        case 1: { p_pixel_color *= texture(u_textures[1], texture_coords, 0); } break;
+        case 2: { p_pixel_color *= texture(u_textures[2], texture_coords, 0); } break;
+        case 3: { p_pixel_color *= texture(u_textures[3], texture_coords, 0); } break;
+        case 4: { p_pixel_color *= texture(u_textures[4], texture_coords, 0); } break;
+        case 5: { p_pixel_color *= texture(u_textures[5], texture_coords, 0); } break;
+        case 6: { p_pixel_color *= texture(u_textures[6], texture_coords, 0); } break;
+        case 7: { p_pixel_color *= texture(u_textures[7], texture_coords, 0); } break;
 
         default: break;
     }
-*/
-
-    p_pixel_color = texture_value * v_vertex_color;
 }
 `
 
@@ -85,16 +82,17 @@ Quad_Vertex :: struct
 {
     vertex_coords:  [2]f32,
     vertex_color:   [4]f32,
-    texture_coords: [2]i32,
-    sampler_index:  i32,
+    texture_coords: [2]f32,
+    texture_index:  f32,
 }
 
 Quad_Index :: u32
 
 Quad_Batch :: struct
 {
-    mesh:   Mesh,
-    shader: Shader,
+    geometry: Geometry_Batch,
+    textures: Texture_Table,
+    shader:   Shader,
 
     vertices: [dynamic]Quad_Vertex,
     indices:  [dynamic]Quad_Index,
@@ -104,15 +102,18 @@ Quad_Batch :: struct
 // Procs
 //
 
-quad_batch_make :: proc(allocator := context.allocator) -> (Quad_Batch, bool)
+quad_batch_make :: proc(limit: int, allocator := context.allocator) -> (Quad_Batch, bool)
 {
-    value  := Quad_Batch {}
-    layout := vertex_layout_make_quad()
-    state  := true
+    value := Quad_Batch {}
+    state := true
 
-    value.mesh, state = mesh_make(Quad_Vertex, Quad_Index, 8192)
+    value.geometry, state = geometry_batch_alloc(limit, Quad_Vertex, Quad_Index)
 
     if state == true {
+        layout := vertex_layout_make_quad()
+
+        geometry_batch_apply_layout(&value.geometry, &layout)
+
         value.shader, state = shader_make_quad()
     }
 
@@ -125,10 +126,8 @@ quad_batch_make :: proc(allocator := context.allocator) -> (Quad_Batch, bool)
 
         shader_destroy(&value.shader)
 
-        mesh_destroy(&value.mesh)
+        geometry_batch_destroy(&value.geometry)
     }
-
-    mesh_apply_layout(&value.mesh, &layout)
 
     return value, state
 }
@@ -140,7 +139,7 @@ quad_batch_destroy :: proc(self: ^Quad_Batch)
 
     shader_destroy(&self.shader)
 
-    mesh_destroy(&self.mesh)
+    geometry_batch_destroy(&self.geometry)
 
     self.vertices = {}
     self.indices  = {}
@@ -154,13 +153,14 @@ quad_batch_clear :: proc(self: ^Quad_Batch)
 
 quad_batch_write :: proc(self: ^Quad_Batch)
 {
-    log.debugf("%v", mesh_write_vertices(&self.mesh, self.vertices[:]))
-    log.debugf("%v", mesh_write_indices(&self.mesh, self.indices[:]))
+    geometry_batch_write_to_front(&self.geometry,
+        self.vertices[:], self.indices[:])
 
-    shader_execute(&self.shader, &self.mesh)
+    shader_execute(&self.shader, &self.geometry,
+        &self.textures)
 }
 
-quad_batch_add :: proc(self: ^Quad_Batch, vertices: [QUAD_VERTEX_COUNT]Quad_Vertex) -> bool
+quad_batch_add :: proc(self: ^Quad_Batch, vertices: [QUAD_VERTEX_COUNT]Quad_Vertex, texture: Texture_Slot) -> bool
 {
     indices := [QUAD_INDEX_COUNT]Quad_Index {0, 1, 2, 2, 1, 3}
 
@@ -172,6 +172,10 @@ quad_batch_add :: proc(self: ^Quad_Batch, vertices: [QUAD_VERTEX_COUNT]Quad_Vert
 
     if state == false {
         resize(&self.vertices, len(self.vertices) - len(vertices))
+    }
+
+    if state == true {
+        texture_table_add(&self.textures, texture)
     }
 
     return state
